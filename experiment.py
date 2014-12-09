@@ -10,10 +10,8 @@ ap.add_argument('--train',
                 help='training data (libSVM format)')
 
 ap.add_argument('--verbose',
-                metavar='TRAIN',
-                default="20news",
-                choices=['imbd', 'sraa', '20news'],
-                help='training data (libSVM format)')
+                action='store_true'
+                help='to print progress of experiment')
 
 
 ap.add_argument('--config',
@@ -26,7 +24,7 @@ def main():
     args = ap.parse_args()
     print args.train
     config = cfgutils.get_config(args.config)
-    experiment = Experiment(args.train, config)
+    experiment = Experiment(args.train, config, verbose=args.verbose)
     experiment.start()
 
 

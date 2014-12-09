@@ -14,8 +14,9 @@ from sklearn import cross_validation
 class Experiment(object):
 	"""Main experiment class to run according to configuration"""
 	# def __init__(self, dataname, learner, expert, trials=5, folds=1, split=.5, costfn=None):
-	def __init__(self, dataname, config):
+	def __init__(self, dataname, config, verbose=False):
 		super(Experiment, self).__init__()
+		self.verbose = verbose
 		self.dataname = dataname
 		self.config = config
 		self.data 	= None
@@ -45,7 +46,7 @@ class Experiment(object):
 
 
 	def start(self):
-
+		trial = []
 		self.data = datautil.load_dataset(self.dataname, categories=None, rnd=self.rnd_state, shuffle=True)
 		self.data = self.vectorize(self.data)
 		
@@ -55,15 +56,15 @@ class Experiment(object):
 			## get the data of this cv iteration
 			train, test = exputil.sample_data(self.data, train_index, test_index)
 			## get the expert and student
-			learner = get_learner(cfgutil.get_config_section(config, 'learner'))
-			expert = get_expert(cfgutil.get_config_section(config, 'expert'))
-
+			learner = exputil.get_learner(cfgutil.get_config_section(config, 'learner'))
+			expert = exputl.get_expert(cfgutil.get_config_section(config, 'expert'))
+			expert.fit(train.bow, y=train.target)
 			## do active learning
 			results = main_loop(learner, expert, self.buget, self.bootstrap, train, test)
 			
 			## save the results
-			update_trial_results(results)
-		self.save_results(results, self.folds, self.trials, self.dataname)
+			trial.append(results)
+		self.save_results(trial, self.dataname)
 
 	def bootstrap(self, bt):
 		pass
@@ -78,7 +79,7 @@ class Experiment(object):
 		auc = metrics.roc_auc_score(test.target, predict_proba)
 		return {'auc':auc, 'accu':accu}
 
-	def evaluate_oracle(self, query,labels):
+	def evaluate_oracle(self, query, labels):
 		cm = metrics.confusion_matrix(query.target, labels)
 		return cm
 
