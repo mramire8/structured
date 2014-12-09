@@ -63,6 +63,11 @@ def get_learner(config):
 	cl_name = config['model']
 	clf = get_classifier(cl_name, parameter=config['parameter'])
 	learner = Learner(clf)
+	if config['type'] == 'joint':
+		learner = SequentialLearner
+	elif config['type'] == 'sequential':
+	else:
+		raise ValueError("We don't know {} leaner".format(config['type']))
     return learner
 
 def get_expert(config):
