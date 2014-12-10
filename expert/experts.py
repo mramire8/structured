@@ -1,3 +1,4 @@
+from base import BaseExpert
 
 class TrueExpert(BaseExpert):
     """docstring for TrueExpert"""
@@ -11,6 +12,8 @@ class TrueExpert(BaseExpert):
             raise Exception("True labels are missing")
         else:
             return y
+    def fit(self, X, y=None):
+    	return self
 
 class PredictingExpert(BaseExpert):
     """docstring for PredictingExpert"""
@@ -21,13 +24,20 @@ class PredictingExpert(BaseExpert):
     def label(self, data, y=None):
         return self.oracle.predict(data)
 
+    def fit(self, X, y=None):
+        if y is not None:
+            self.oracle.fit(data.bow, y)
+        else:
+            self.oracle.fit(data.bow, data.target)
+        return self
+
 class SentenceExpert(PredictingExpert):
     """docstring for SentenceExpert"""
     def __init__(self, oracle, tokenizer=None):
         super(SentenceExpert, self).__init__(oracle)
         self.tokenizer = None
 
-    def convert_to_sentence(X, y, vct):
+    def convert_to_sentence(self, X, y, vct, limit=None):
         sent_train = []
         labels = []
         tokenizer = vct.build_tokenizer()

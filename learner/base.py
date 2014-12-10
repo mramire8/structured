@@ -1,9 +1,10 @@
 
 class Learner(object):
     """docstring for Learner"""
-    def __init__(self, model):
+    def __init__(self, model, seed=None):
         super(Learner, self).__init__()
         self.model = model
+        self.seed = seed
     
     def next(self, pool, step):
         raise Exception("Undefined next function")

@@ -12,12 +12,15 @@ From the command line:
 $ python experiment.py --train data_name --config config_file.cfg
 ```
 
+data_name can be: imdb, sraa, 20news
+
 ## Configuration File
 
-Configuration file has the same format as an INI file. Sections ```[sections]``` and ```key=value``` or ```key:value```. 
+Configuration file has the same format as an INI file. Sections ```[sections]``` and ```key=value``` or ```key:value```. However, for this project values should reflec python syntax. For example, strings should be quoted, boolean should be capitalized. 
+
 
 The sections are: 
-* student
+* learner
 * expert
 * experiment
 * data 
@@ -25,7 +28,7 @@ The sections are:
 Example:
 
 ```
-[student]
+[learner]
 type           : "sequential"
 model          : "lrl2"
 parameter      : 1
@@ -36,12 +39,11 @@ snippet      : "sr"
 [expert]        
 type           : "sent"
 model          : "lrl2"
-penalty        : 1
+parameter      : 1
 costmodel      : 1
                 
 
 [data]
-data            : "imdb"
 limit			: 2
 split			: 0.5
 min_size		: 10
@@ -63,19 +65,21 @@ limit          : 2
 costfunction   : "unit"
 ```
 
-* **student section**
-* type: sequential, joint
-* model: lr, lrl2, mnb
-* utility: rnd, unc
-* snippet: sr, rnd, first1
+The possible values for each section are: 
+
+* **learner section**
+	* type: sequential, joint
+	* model: lr, lrl2, mnb
+	* utility: rnd, unc
+	* snippet: sr, rnd, first1
 
 
 * **expert section**
-* type: sent(ence), true(labels), pred(icting)
-* model: lr, lrl2, mnb
+	* type: sent(ence), true(labels), pred(icting)
+	* model: lr, lrl2, mnb
 
-* **data section **
-* vectorizer: tfidf, bow
-* categories: only applies for some data. options: None, religion (20news)
-* data: imdb, sraa, 20news
+* **data section**
+	* vectorizer: tfidf, bow
+	* categories: only applies for some data. options: None, religion (20news)
+
 

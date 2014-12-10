@@ -84,10 +84,13 @@ class Experiment(object):
         for train_index, test_index in cv:
             ## get the data of this cv iteration
             train, test = exputil.sample_data(self.data, train_index, test_index)
+            
             ## get the expert and student
-            learner = exputil.get_learner(cfgutil.get_config_section(self.config, 'learner'))
-            expert = exputil.get_expert(cfgutil.get_config_section(self.config, 'expert'))
-            expert.fit(train.bow, y=train.target, vct=self.vct)
+            learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'))
+
+            expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'))
+            expert.fit(train.data, y=train.target, vct=self.vct)
+
             ## do active learning
             results = self.main_loop(learner, expert, self.budget, self.bootstrap, train, test)
             

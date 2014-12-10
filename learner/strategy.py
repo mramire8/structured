@@ -13,6 +13,7 @@ class BootstrapFromEach(Learner):
         super(BootstrapFromEach, self).__init__(seed=seed)
 
     def bootstrap(self, pool, k=2, shuffle=False):
+        from collections import defaultdict
         k = int(k / 2)
         data = defaultdict(lambda: [])
 
@@ -32,18 +33,18 @@ class BootstrapFromEach(Learner):
 
 class ActiveLearner(Learner):
     """docstring for ActiveLearner"""
-    def __init__(self, model, utility=None):
-        super(ActiveLearner, self).__init__(model)
+    def __init__(self, model, utility=None, seed=54321):
+        super(ActiveLearner, self).__init__(model, seed=seed)
         self.utility = self.utility_base
-        self.rnd_state = np.random.RandomState(self.rnd_state)
+        self.rnd_state = np.random.RandomState(self.seed)
 
     def utility_base(self, x):
         raise Exception("We need a utility function")
 
-class StructuredLearer(ActiveLearner):
-    """docstring for StructuredLearer"""
-    def __init__(self, model, snippet_fn=None, utililty_fn=None):
-        super(StructuredLearer, self).__init__(model)
+class StructuredLearner(ActiveLearner):
+    """docstring for StructuredLearner"""
+    def __init__(self, model, snippet_fn=None, utility_fn=None):
+        super(StructuredLearner, self).__init__(model)
         import copy
         self.snippet_model = copy.copy(model)
         self.utility=utility_fn
@@ -61,7 +62,7 @@ class StructuredLearer(ActiveLearner):
         else:
             return self.rnd_state.random_sample(X.shape[0])
 
-    def _utility_unc(X):
+    def _utility_unc(self, X):
         p = self.model.predict_proba(X)
         if X.shape[0] == 1:
             return 1. - p.max()
@@ -80,7 +81,7 @@ class StructuredLearer(ActiveLearner):
         elif util=='max':
             self.utility=self._snnipet_max
 
-    def _snippet_max(X):
+    def _snippet_max(self, X):
         p = self.snippet_model.predict_proba(X)
         if X.shape[0] ==1:
             return p.max()
@@ -91,21 +92,21 @@ class StructuredLearer(ActiveLearner):
         return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model, 
             self.snippet_model, self.utility, self.snippet_utility)
 
-class Sequential(StructuredLearer):
+
+class Sequential(StructuredLearner):
     """docstring for Sequential"""
-    def __init__(self, arg):
-        super(Sequential, self).__init__()
-        self.arg = arg
+    def __init__(self, model, snippet_fn=None, utility_fn=None):
+        super(Sequential, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn)
 
-    def next(pool, step):
+    def next(self, pool, step):
         pass
 
-class Joint(StructuredLearer):
+
+class Joint(StructuredLearner):
     """docstring for Joint"""
-    def __init__(self, arg):
-        super(Joint, self).__init__()
-        self.arg = arg
+    def __init__(self, model, snippet_fn=None, utility_fn=None):
+        super(Joint, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn)
 
-    def next(pool, step):
+    def next(self, pool, step):
         pass
-        
+
