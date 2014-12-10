@@ -32,6 +32,7 @@ class Experiment(object):
         self.budget = None
         self.max_iteration = None
         self.step = None
+        self.seed = None
         self.rnd_state = np.random.RandomState(32564)
         self.remaining = None
         self.vct = exputil.get_vectorizer(cfgutil.get_section_options(config, 'data'))
@@ -67,6 +68,7 @@ class Experiment(object):
         self.budget     = config['budget']
         self.prefix = config['fileprefix']
         self.output = config['outputdir']
+        self.seed = config['seed']
         self.costfn = exputil.get_costfn(config['costfunction'])
         config = cfgutil.get_section_options(config_obj, 'data')
         self.split = config['split']
@@ -84,11 +86,12 @@ class Experiment(object):
         for train_index, test_index in cv:
             ## get the data of this cv iteration
             train, test = exputil.sample_data(self.data, train_index, test_index)
-            
+
             ## get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'))
 
             expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'))
+
             expert.fit(train.data, y=train.target, vct=self.vct)
 
             ## do active learning
@@ -99,7 +102,8 @@ class Experiment(object):
         self.save_results(trial, self.dataname)
 
     def bootstrap(self, pool, bt):
-        initial = BootstrapFromEach.bootstrap(pool, k=bt, shuffle=False)
+        bt_obj = BootstrapFromEach(None, seed=self.seed)
+        initial = bt_obj.bootstrap(pool, k=bt, shuffle=False)
         bootstrap = bunch.Buch()
         bootstrap.index = initial
         bootstrap.bow = pool.bow[initial]

@@ -35,7 +35,7 @@ class SentenceExpert(PredictingExpert):
     """docstring for SentenceExpert"""
     def __init__(self, oracle, tokenizer=None):
         super(SentenceExpert, self).__init__(oracle)
-        self.tokenizer = None
+        self.tokenizer = tokenizer
 
     def convert_to_sentence(self, X, y, vct, limit=None):
         sent_train = []
@@ -53,10 +53,11 @@ class SentenceExpert(PredictingExpert):
             sent_train.extend(sents)  # at the sentences separately as individual documents
             labels.extend([t] * len(sents))  # Give the label of the document to all its sentences
 
-        return labels, sent_train #, dump
+        return sent_train, labels #, dump
 
     def fit(self, X_text, y=None, vct=None):
     	sx, sy = self.convert_to_sentence(X_text, y, vct)
-        self.oracle.fit(vct.transform(sx),sy)
+    	sx = vct.transform(sx)
+        self.oracle.fit(sx,sy)
         return self
         

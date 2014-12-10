@@ -9,8 +9,8 @@ class RandomSampling(Learner):
 
         
 class BootstrapFromEach(Learner):
-    def __init__(self, seed):
-        super(BootstrapFromEach, self).__init__(seed=seed)
+    def __init__(self, model, seed):
+        super(BootstrapFromEach, self).__init__(model, seed=seed)
 
     def bootstrap(self, pool, k=2, shuffle=False):
         from collections import defaultdict
