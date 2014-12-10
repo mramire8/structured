@@ -32,10 +32,12 @@ class Experiment(object):
         self.budget = None
         self.max_iteration = None
         self.step = None
+        self.bootstrap_size = None
         self.seed = None
         self.rnd_state = np.random.RandomState(32564)
         self.remaining = None
         self.vct = exputil.get_vectorizer(cfgutil.get_section_options(config, 'data'))
+        self.sent_tokenizer = None
 
     def vectorize(self, data):
         data.train.bow = self.vct.fit_transform(data.train.data)
@@ -60,6 +62,8 @@ class Experiment(object):
         return cv
 
     def _setup_options(self, config_obj):
+
+        #experiment related config
         config = cfgutil.get_section_options(config_obj, 'experiment')
         self.trials = config['trials']
         self.folds = config['folds']
@@ -69,11 +73,18 @@ class Experiment(object):
         self.prefix = config['fileprefix']
         self.output = config['outputdir']
         self.seed = config['seed']
+        self.bootstrap_size = config['bootstrap']
         self.costfn = exputil.get_costfn(config['costfunction'])
+
+        #data related config
         config = cfgutil.get_section_options(config_obj, 'data')
         self.split = config['split']
         self.data_cat = config['categories']
         self.limit = config['limit']
+
+        #data related config
+        config = cfgutil.get_section_options(config_obj, 'expert')
+        self.sent_tokenizer = exputil.get_tokenizer(config['sent_tokenizer'])
 
     def start(self):
 
@@ -88,29 +99,36 @@ class Experiment(object):
             train, test = exputil.sample_data(self.data, train_index, test_index)
 
             ## get the expert and student
-            learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'))
+            learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'), 
+                vct=self.vct, sent_tk=self.sent_tokenizer)
 
             expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'))
 
             expert.fit(train.data, y=train.target, vct=self.vct)
 
             ## do active learning
-            results = self.main_loop(learner, expert, self.budget, self.bootstrap, train, test)
+            results = self.main_loop(learner, expert, self.budget, self.bootstrap_size, train, test)
             
             ## save the results
             trial.append(results)
-        self.save_results(trial, self.dataname)
+        self.report_results(trial, self.dataname)
 
-    def bootstrap(self, pool, bt):
+    def bootstrap(self, pool, bt, train):
+        #get a bootstrap
         bt_obj = BootstrapFromEach(None, seed=self.seed)
-        initial = bt_obj.bootstrap(pool, k=bt, shuffle=False)
-        bootstrap = bunch.Buch()
-        bootstrap.index = initial
-        bootstrap.bow = pool.bow[initial]
-        bootstrap.data= pool.data[initial]
-        bootstrap.target = pool.target[initial]
+        initial = bt_obj.bootstrap(pool,step=bt, shuffle=False)
 
-        return bootstrap
+        # #bundle to work with it
+        # init_data = bunch.Bunch()
+        # init_data.index = initial
+        # init_data.bow = pool.bow[initial]
+        # init_data.data= pool.data[initial]
+        # init_data.target = pool.target[initial]
+
+        # update initial training data
+        train.index = initial
+        train.target = pool.target[initial]
+        return train
 
     def update_cost(self, current_cost, query):
         return current_cost + self.costfn(query)
@@ -132,11 +150,21 @@ class Experiment(object):
         results['ora_accu'][iteration].append(oracle)
         return results
 
-    def update_pool(self, pool, query):
+    def update_pool(self, pool, query, train):
         ## remove from remaining
-        for q in query.index:
+        for q, t in zip(query.index, query.target):
             pool.remaining.remove(q)
-        return pool
+            train.index.append(q)
+            train.target.extend(t)
+        return pool, train
+
+    def retrain(self, learner, pool, train):
+        X = pool.bow[train.index]
+        y = train.target
+        ## get training document text
+        text = pool.data[train.index]
+        
+        return learner.fit(X, y, doc_text=text) 
 
     def main_loop(self, learner, expert, budget, bootstrap, pool, test):
         from  collections import deque
@@ -146,19 +174,31 @@ class Experiment(object):
         self.rnd_state.shuffle(rnd_set)
         remaining = deque(rnd_set)
         pool.remaining = remaining
+        
+        ## record keeping
         results = self._start_results()
-        while current_cost <= budget and iteration < self.max_iteration:
+
+        ## keep track of current training
+        train = bunch.Bunch(index=[], target=np.array([]))
+
+        while current_cost <= budget and iteration <= self.max_iteration:
             if iteration == 0:
                 #bootstrap
-                bt = self.bootstrap(pool, bootstrap)
-                learner.fit(bt)
-                pass
+                train = self.bootstrap(pool, bootstrap, train)
+                learner=self.retrain(learner, pool, train)
             else:
+                ## select query and query labels
                 query = learner.next(self.step, pool)
-                labels = expert.label(query)
-                pool = self.update_pool(pool, query)
+                labels = expert.label(query.bow)
+
+                #update pool and cost
+                pool, train = self.update_pool(pool, query, train)
                 current_cost = self.update_cost(current_cost, query)
-                learner.fit(query, labels,)
+
+                #re-train the learner
+                learner = self.retrain(learner, pool, train)
+
+                #evaluate
                 step_results = self.evaluate(learner, test)
                 step_oracle = self.evaluate_oracle(query, labels)
                 results = self.update_run_results(results, step_results, step_oracle, current_cost)
@@ -170,9 +210,9 @@ class Experiment(object):
         r['accuracy']     = defaultdict(lambda: [])
         r['auc']        = defaultdict(lambda: [])
         r['ora_accu']    = defaultdict(lambda: [])
-        
         return r
 
     def report_results(self, results):
-        pass
+        print results
+        raise NotImplementedError("report results not implemented yet")
 

@@ -6,18 +6,21 @@ def sample_data(data, train_idx, test_idx):
     sample = bunch.Bunch(train=bunch.Bunch(), test=bunch.Bunch())
     
     if len(test_idx) > 0: #if there are test indexes
-        sample.train.data = (np.array(data.data, dtype=object)[train_idx]).tolist()
-        sample.test.data = data.data[test_idx]
+        sample.train.data = np.array(data.data, dtype=object)[train_idx]
+        sample.test.data = np.array(data.data, dtype=object)[test_idx]
         sample.train.target = data.target[train_idx]
         sample.test.target = data.target[test_idx]
+        sample.train.bow = data.bow[train_idx]
+        sample.test.bow = data.bow[test_idx]
         sample.target_names = data.target_names
     else:
         ## Just shuffle the data
         sample = data
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[train_idx]
-        sample.train.data = data_lst.tolist()
+        sample.train.data = data_lst
         sample.train.target = data.train.target[train_idx]
+        sample.train.bow = data.train.bow[train_idx]
 
     return sample.train, sample.test
 
@@ -57,19 +60,21 @@ def get_classifier(cl_name, **kwargs):
     return clf
 
 
-def get_learner(config):
+def get_learner(learn_config, vct=None, sent_tk=None):
     from learner.base import Learner
-    cl_name = config['model']
-    clf = get_classifier(cl_name, parameter=config['parameter'])
+    cl_name = learn_config['model']
+    clf = get_classifier(cl_name, parameter=learn_config['parameter'])
     learner = Learner(clf)
-    if config['type'] == 'joint':
+    if learn_config['type'] == 'joint':
         learner = Joint(clf, snippet_fn=None, utility_fn=None)
-    elif config['type'] == 'sequential':
+    elif learn_config['type'] == 'sequential':
         learner = Sequential(clf, snippet_fn=None, utility_fn=None)
     else:
-        raise ValueError("We don't know {} leaner".format(config['type']))
-    learner.set_utility(config['utility'])
-    learner.set_snippet_utility(config['snippet'])
+        raise ValueError("We don't know {} leaner".format(learn_config['type']))
+    learner.set_utility(learn_config['utility'])
+    learner.set_snippet_utility(learn_config['snippet'])
+    learner.set_sent_tokenizer(sent_tk)
+    learner.set_vct(vct)
 
     return learner
 

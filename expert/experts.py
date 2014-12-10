@@ -43,7 +43,6 @@ class SentenceExpert(PredictingExpert):
         tokenizer = vct.build_tokenizer()
         ## Convert the documents into sentences: train
         for t, sentences in zip(y, self.tokenizer.batch_tokenize(X)):
-
             if limit is None:
                 sents = [s for s in sentences if len(tokenizer(s)) > 1]
             elif limit > 0:
