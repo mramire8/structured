@@ -10,7 +10,7 @@ ap.add_argument('--train',
                 help='training data (libSVM format)')
 
 ap.add_argument('--verbose',
-                action='store_true'
+                action='store_true',
                 help='to print progress of experiment')
 
 

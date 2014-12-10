@@ -10,6 +10,7 @@ import utilities.experimentutils as exputil
 import utilities.datautils as datautil
 import utilities.configutils as cfgutil
 from sklearn import cross_validation
+import numpy as np
 
 class Experiment(object):
 	"""Main experiment class to run according to configuration"""
@@ -18,13 +19,18 @@ class Experiment(object):
 		super(Experiment, self).__init__()
 		self.verbose = verbose
 		self.dataname = dataname
+		self.data_cat = None
 		self.config = config
 		self.data 	= None
 		self.trials	= None
 		self.folds	= None
 		self.split	= None
 		self.costfn = None
-		self.rnd_state = 32564
+		self.budget = None
+		self.max_iteration = None
+		self.step = None
+		self.rnd_state = np.random.RandomState(32564)
+		self.remaining = None
 		self.vct = exputil.get_vectorizer(cfgutil.get_section_options(config, 'data'))
 
 	def vectorize(self, data):
@@ -44,13 +50,27 @@ class Experiment(object):
 			cv = cross_validation.KFold(n, n_folds=config['folds'], random_state=self.rnd_state)
 		return cv
 
-
+	def _setup_options(self, config_obj):
+		config = cfgutil.get_section_options(config_obj, 'experiment')
+		self.trials = config['trials']
+		self.folds = config['folds']
+		self.split = config['split']
+		self.max_iteration = config['maxiter']
+		self.step 	= config['stepsize']
+		self.budget 	= config['budget']
+		self.prefix = config['fileprefix']
+		self.output = config['output']
+		self.limit = config['limit']
+		self.costfn = cfgutil.get_costfn(config['costfunction'])
+		config = cfgutil.get_section_options(config_obj, 'data')
+		self.data_cat = config['categories']
 	def start(self):
+
 		trial = []
-		self.data = datautil.load_dataset(self.dataname, categories=None, rnd=self.rnd_state, shuffle=True)
+		self._setup_options(self.config)
+		self.data = datautil.load_dataset(self.dataname, categories=self.data_cat, rnd=self.rnd_state, shuffle=True)
 		self.data = self.vectorize(self.data)
-		
-		cv = get_cross_validation_data(self.data, cfgutil.get_section('experiment'))
+		cv = get_cross_validation_data(self.data,folds=self.folds, trials=self.trials, split=self.split)
 
 		for train_index, text_index in cv:
 			## get the data of this cv iteration
@@ -60,14 +80,16 @@ class Experiment(object):
 			expert = exputl.get_expert(cfgutil.get_config_section(config, 'expert'))
 			expert.fit(train.bow, y=train.target)
 			## do active learning
-			results = main_loop(learner, expert, self.buget, self.bootstrap, train, test)
+			results = main_loop(learner, expert, self.budget, self.bootstrap, train, test)
 			
 			## save the results
 			trial.append(results)
 		self.save_results(trial, self.dataname)
 
-	def bootstrap(self, bt):
-		pass
+	def bootstrap(self, pool, bt):
+		initial = Bootstrap.bootstrap(pool, k=bt, shuffle=False)
+
+		return initial
 
 	def update_cost(self, current_cost, query):
 		return current_cost + self.costfn(query)
@@ -79,20 +101,35 @@ class Experiment(object):
 		auc = metrics.roc_auc_score(test.target, predict_proba)
 		return {'auc':auc, 'accu':accu}
 
-	def evaluate_oracle(self, query, labels):
-		cm = metrics.confusion_matrix(query.target, labels)
+	def evaluate_oracle(self, query, predictions, labels=None):
+		cm = metrics.confusion_matrix(query.target, predictions, labels=labels)
 		return cm
 
-	def update_run_results(self, step, oracle, iteration):
-		pass
+	def update_run_results(self, results, step, oracle, iteration):
+		results['accuracy'][iteration].append(step['accu'])
+		results['auc'][iteration].append(step['auc'])
+		results['ora_accu'][iteration].append(oracle)
+		return results
+
+	def update_pool(self, pool, query):
+		## remove from remaining
+		for q in query.index:
+			pool.remaining.remove(q)
+		return pool
 
 	def main_loop(self, learner, expert, budget, bootstrap, pool, test):
+		from  collections import deque
 		iteration = 0
 		current_cost = 0
+		rnd_set = range(pool.target.shape[0])
+		self.rnd_state.shuffle(rnd_set)
+		remaining = deque(rnd_set)
+		pool.remaining = remaining
+		results = self._start_results()
 		while current_cost <= budget and iteration < self.max_iteration:
 			if iteration == 0:
 				#bootstrap
-				bt = self.bootstrap(bootstrap)
+				bt = self.bootstrap(pool, bootstrap)
 				learner.fit(bt)
 				pass
 			else:
@@ -103,9 +140,17 @@ class Experiment(object):
 				learner.fit(query, labels)
 				step_results = evaluate(learner, test)
 				step_oracle = evaluate_oracle(query, labels)
-				results = update_run_results(step_results, step_oracle, iteration)
+				results = update_run_results(results, step_results, step_oracle, current_cost)
 			iteration +=1
 		return results
+
+	def _start_results(self):
+		r = {}
+		r['accuracy'] 	= defaultdict(lambda: [])
+		r['auc']		= defaultdict(lambda: [])
+		r['ora_accu']	= defaultdict(lambda: [])
+		
+		return r
 
 	def report_results(self, results):
 		pass

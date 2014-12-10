@@ -10,7 +10,7 @@ def sample_data(data, train_idx, test_idx):
     sample.test.target = data.target[test_idx]
     sample.target_names = data.target_names
 
-return sample
+    return sample
 
 def get_vectorizer(config):
     limit = config['limit']
@@ -25,8 +25,8 @@ def get_vectorizer(config):
 
 
 def get_classifier(cl_name, **kwargs):
-	from sklearn.naive_bayes import MultinomialNB
-	from sklearn.linear_model import LogisticRegression
+    from sklearn.naive_bayes import MultinomialNB
+    from sklearn.linear_model import LogisticRegression
     clf = None
     if cl_name in "mnb":
         alpha = 1
@@ -59,19 +59,31 @@ def get_classifier(cl_name, **kwargs):
 
 
 def get_learner(config):
-	from learner.base import Learner
-	cl_name = config['model']
-	clf = get_classifier(cl_name, parameter=config['parameter'])
-	learner = Learner(clf)
-	if config['type'] == 'joint':
-		learner = SequentialLearner
-	elif config['type'] == 'sequential':
-	else:
-		raise ValueError("We don't know {} leaner".format(config['type']))
+    from learner.base import Learner
+    cl_name = config['model']
+    clf = get_classifier(cl_name, parameter=config['parameter'])
+    learner = Learner(clf)
+    if config['type'] == 'joint':
+        learner = Joint(clf, snippet_fn=None, utility_fn=None)
+    elif config['type'] == 'sequential':
+        learner = Sequential(clf, snippet_fn=None, utility_fn=None)
+    else:
+        raise ValueError("We don't know {} leaner".format(config['type']))
+    learner.set_utility(config['utility'])
+    learner.set_snippet_utility(config['snippet'])
     return learner
 
 def get_expert(config):
     from expert.base import BaseExpert
-	cl_name = config['model']
-	clf = get_classifier(cl_name, parameter=config['parameter'])
-	learner = BaseExpert(clf)
+    cl_name = config['model']
+    clf = get_classifier(cl_name, parameter=config['parameter'])
+    learner = BaseExpert(clf)
+
+def get_costfn(fn_name):
+    if fn_name == 'unit':
+        return unit_cost
+    else:
+        raise Exception("Unknown cost function")
+
+def unit_cost(X):
+    return X.shape[0]

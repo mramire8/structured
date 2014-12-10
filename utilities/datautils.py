@@ -115,15 +115,21 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356):
     return data
 
 
-def load_20newsgroups(categories=None, shuffle=True, rnd=1):
-
+def load_20newsgroups(category=None, shuffle=True, rnd=1):
+    categories = {'religion': ['alt.atheism', 'talk.religion.misc'],
+                  'graphics': ['comp.graphics', 'comp.windows.x'],
+                  'hardware': ['comp.os.ms-windows.misc', 'comp.sys.ibm.pc.hardware'],
+                  'baseball': ['rec.sport.baseball', 'sci.crypt']}
+    cat = None
+    if category is not None:
+        cat = categories[category]
     data = bunch.Bunch()
-    data.train = fetch_20newsgroups(subset='train', categories=categories, remove=('headers','footers', 'quotes'),
+    data.train = fetch_20newsgroups(subset='train', categories=cat, remove=('headers','footers', 'quotes'),
                                     shuffle=shuffle, random_state=rnd)
 
     data.train.data = [keep_header_subject(text) for text in data.train.data]
 
-    data.test = fetch_20newsgroups(subset='test', categories=categories, remove=('headers','footers', 'quotes'),
+    data.test = fetch_20newsgroups(subset='test', categories=cat, remove=('headers','footers', 'quotes'),
                                    shuffle=shuffle, random_state=rnd)
 
     data.test.data = [keep_header_subject(text) for text in data.test.data]
