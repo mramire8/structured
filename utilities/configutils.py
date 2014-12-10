@@ -1,5 +1,6 @@
+
 from ConfigParser import SafeConfigParser
-import sys
+import ast
 
 def get_config(config_file):
     config = SafeConfigParser()
@@ -23,18 +24,16 @@ def has_section(config, section):
 def get_section_options(config, section):
     dict1 = {}
     for k,v in  config.items(section):
-        dict1[k] = v
+        try: 
+            dict1[k] = ast.literal_eval(v)
+        except ValueError:
+            dict1[k] = v
     return dict1
 
-def config_section_map(section):
+def get_section_option(config, section, option):
     dict1 = {}
-    options = Config.options(section)
-    for option in options:
-        try:
-            dict1[option] = Config.get(section, option)
-            if dict1[option] == -1:
-                DebugPrint("skip: %s" % option)
-        except:
-            print("exception on %s!" % option)
-            dict1[option] = None
+    for k,v in  config.items(section):
+        dict1[k] = ast.literal_eval(v)
     return dict1
+
+

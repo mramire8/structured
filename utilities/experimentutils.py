@@ -1,14 +1,22 @@
-from sklearn.datasets.base import Bunch
 from sklearn.datasets import base as bunch
+from learner.strategy import Joint, Sequential
 
 
 def sample_data(data, train_idx, test_idx):
-    sample = Bunch()
-    sample.train.data = data.data[train_idx]
-    sample.test.data = data.data[test_idx]
-    sample.train.target = data.target[train_idx]
-    sample.test.target = data.target[test_idx]
-    sample.target_names = data.target_names
+    sample = bunch.Bunch()
+    
+    if len(test_idx) > 0: #if there are test indexes
+        sample.train.data = (np.array(data.data, dtype=object)[train_idx]).tolist()
+        sample.test.data = data.data[test_idx]
+        sample.train.target = data.target[train_idx]
+        sample.test.target = data.target[test_idx]
+        sample.target_names = data.target_names
+    else:
+        ## Just shuffle the data
+        data_lst = np.array(data.train.data, dtype=object)
+        data_lst = data_lst[train_idx]
+        sample.train.data = data_lst.tolist()
+        sample.train.target = data.train.target[train_idx]
 
     return sample
 
@@ -77,7 +85,16 @@ def get_expert(config):
     from expert.base import BaseExpert
     cl_name = config['model']
     clf = get_classifier(cl_name, parameter=config['parameter'])
-    learner = BaseExpert(clf)
+    tk = get_tokenizer(config['sent_tokenizer'])
+    learner = BaseExpert(clf, tokenizer=tk)
+
+def get_tokenizer(tk_name):
+    if tk_name == 'nltk':
+        import nltk
+        sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+        return sent_detector
+    else:
+        raise Exception("Unknown sentence tokenizer")
 
 def get_costfn(fn_name):
     if fn_name == 'unit':

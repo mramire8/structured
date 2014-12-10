@@ -151,7 +151,7 @@ def load_dataset(name, categories=None, rnd=2356, shuffle=True):
         data = load_aviation(AVI_HOME, shuffle=shuffle, rnd=rnd)
     elif "20news" in name:
         ########## 20 news groups ######
-        data = load_20newsgroups(categories=categories, shuffle=shuffle, rnd=rnd)
+        data = load_20newsgroups(category=categories, shuffle=shuffle, rnd=rnd)
     else:
         raise Exception("We do not know {} dataset".format(name.upper()))
 
