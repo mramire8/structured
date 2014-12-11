@@ -7,7 +7,7 @@ ap = argparse.ArgumentParser(description=__doc__,
 ap.add_argument('--train',
                 metavar='TRAIN',
                 default="20news",
-                choices=['imbd', 'sraa', '20news'],
+                choices=['imdb', 'sraa', '20news'],
                 help='training data (libSVM format)')
 
 ap.add_argument('--verbose',
@@ -20,6 +20,7 @@ ap.add_argument('--config',
                 type=str,
                 default='./default.cfg',
                 help='Experiment configuration file')
+
 
 def main():
     args = ap.parse_args()

@@ -22,10 +22,13 @@ class Experiment(object):
     def __init__(self, dataname, config, verbose=False):
         super(Experiment, self).__init__()
         self.verbose = verbose
+        self.config = config
+
         self.dataname = dataname
         self.data_cat = None
-        self.config = config
         self.data = None
+        self.data_path = None
+
         self.trials = None
         self.folds = None
         self.split = None
@@ -35,6 +38,7 @@ class Experiment(object):
         self.step = None
         self.bootstrap_size = None
         self.seed = None
+
         self.rnd_state = np.random.RandomState(32564)
         self.remaining = None
         self.vct = exputil.get_vectorizer(cfgutil.get_section_options(config, 'data'))
@@ -82,6 +86,7 @@ class Experiment(object):
         self.split = config['split']
         self.data_cat = config['categories']
         self.limit = config['limit']
+        self.data_path = config['path']
 
         #data related config
         config = cfgutil.get_section_options(config_obj, 'expert')
@@ -91,7 +96,7 @@ class Experiment(object):
 
         trial = []
         self._setup_options(self.config)
-        self.data = datautil.load_dataset(self.dataname, categories=self.data_cat, rnd=self.rnd_state, shuffle=True)
+        self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.rnd_state, shuffle=True)
         self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
 

@@ -4,15 +4,6 @@ from sklearn.datasets import fetch_20newsgroups
 from sklearn.datasets import base as bunch
 import numpy as np
 
-if "nt" in os.name:
-    IMDB_HOME = 'C:/Users/mramire8/Documents/Research/Oracle confidence and Interruption/dataset/aclImdb/raw-data'
-    AVI_HOME  = 'C:/Users/mramire8/Documents/Research/Oracle confidence and Interruption/dataset/sraa/sraa/sraa/partition1/data'
-    # AVI_HOME  = 'C:/Users/mramire8/Documents/Research/Oracle confidence and Interruption/dataset/sraa/sraa/sraa/partition1/dummy'
-    TWITTER_HOME="C:/Users/mramire8/Documents/Datasets/twitter"
-else:
-    IMDB_HOME = '/Users/maru/Dataset/aclImdb'
-    AVI_HOME  = '/Users/maru/Dataset/aviation/data'
-    TWITTER_HOME="/Users/maru/Dataset/twitter"
 
 def keep_header_subject(text, keep_subject=False):
     """
@@ -146,16 +137,16 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
     return data
 
 
-def load_dataset(name, categories=None, rnd=2356, shuffle=True):
+def load_dataset(name, path, categories=None, rnd=2356, shuffle=True):
     data = bunch.Bunch()
 
     if "imdb" in name:
         ########## IMDB MOVIE REVIEWS ###########
         # data = bunch.Bunch(load_imdb(name, shuffle=True, rnd=2356, vct=vct, min_size=min_size, fix_k=fixk, raw=raw))  # should brind data as is
-        data = load_imdb(IMDB_HOME, shuffle=shuffle, rnd=rnd)  # should brind data as is
+        data = load_imdb(path, shuffle=shuffle, rnd=rnd)  # should brind data as is
     elif "aviation" in name:
         ########## sraa dataset ######
-        data = load_aviation(AVI_HOME, shuffle=shuffle, rnd=rnd)
+        data = load_aviation(path, shuffle=shuffle, rnd=rnd)
     elif "20news" in name:
         ########## 20 news groups ######
         data = load_20newsgroups(category=categories, shuffle=shuffle, rnd=rnd)
