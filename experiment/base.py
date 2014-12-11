@@ -131,7 +131,7 @@ class Experiment(object):
         return train
 
     def update_cost(self, current_cost, query):
-        return current_cost + self.costfn(query)
+        return current_cost + self.costfn(query.bow)
 
     def evaluate(self, learner, test):
         prediction = learner.predict(test.bow)
@@ -150,9 +150,9 @@ class Experiment(object):
         results['ora_accu'][iteration].append(oracle)
         return results
 
-    def update_pool(self, pool, query, train):
+    def update_pool(self, pool, query, labels, train):
         ## remove from remaining
-        for q, t in zip(query.index, query.target):
+        for q, t in zip(query.index, labels):
             pool.remaining.remove(q)
             train.index.append(q)
             train.target.extend(t)
@@ -188,11 +188,11 @@ class Experiment(object):
                 learner=self.retrain(learner, pool, train)
             else:
                 ## select query and query labels
-                query = learner.next(self.step, pool)
+                query = learner.next(pool, self.step)
                 labels = expert.label(query.bow)
 
                 #update pool and cost
-                pool, train = self.update_pool(pool, query, train)
+                pool, train = self.update_pool(pool, query, labels, train)
                 current_cost = self.update_cost(current_cost, query)
 
                 #re-train the learner

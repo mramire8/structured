@@ -98,18 +98,19 @@ class StructuredLearner(ActiveLearner):
         raise NotImplementedError("Implement in the subclass")
 
     def _compute_utility(self, X):
-        raise NotImplementedError("Implement in the subclass")
+        return self.utility(X)
 
-    def _compute_snippet(self, X):
-        raise NotImplementedError("Implement in the subclass")
-
-    def _query(self, pool, indices):
+    def _query(self, pool, snippets, indices):
         q = bunch.Bunch()
         q.data   = pool.bow[indices] 
+        q.bow    = self.vct.transform(snippets[indices])
         q.text   = pool.data[indices]
         q.target = pool.target[indices]
         q.index  = indices
-        raise NotImplementedError("Implement in the subclass")
+        raise NotImplementedError("bow has to be the snippet bow")
+
+    def _do_calibration(self, scores):
+        return scores
 
     def set_utility(self, util):
         if util == 'rnd':
@@ -143,6 +144,40 @@ class StructuredLearner(ActiveLearner):
     def _snippet_first(self, X):
         raise NotImplementedError("first snippet utility is not impelemented yet")
 
+    def _create_matrix(self, x_sent, x_len):
+        from scipy.sparse import lil_matrix
+        
+        X = lil_matrix((len(x_sent), x_len))
+        
+        return X.tocsr()        
+
+    def _compute_snippet(self, x_text):
+        """select the sentence with the best score for each document"""
+        # scores = super(Joint, self)._compute_snippet(x_text)
+        x_sent= []
+        x_sent_bow = []
+        x_len = 0
+        for sentences in self.sent_tk.batch_tokenize(x_text):
+            x_sent.append(sentences)
+            x_sent_bow.append(self.vct.transform(sentences))
+            x_len = max(len(sentences), x_len)
+
+        x_scores = self._create_matrix(x_sent, x_len)
+
+        for i, s in enumerate(x_sent_bow):
+            score_i = np.zeros(x_len)
+            score_i[:s.shape[0]] = self.snippet_utility(s)
+            x_scores[i] = score_i
+
+        x_scores = self.do_calibration(x_scores)
+
+        # sent_index = x_scores.todense().argsort(axis=1)  
+        sent_index = x_scores.todense().argmax(axis=1)  ## within each document thesentence with the max score
+        sent_max = x_scores.todense().max(axis=1)  ## within each document thesentence with the max score
+        sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
+
+        return sent_max, sent_text
+
     def __str__(self):
         return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model, 
             self.snippet_model, self.utility, self.snippet_utility)
@@ -155,20 +190,25 @@ class Sequential(StructuredLearner):
 
     def _subsample_pool(self, pool):
         subpool = list(pool.remaining)
-        self.rnd_state.shuffle(subpool)
         subpool = subpool[:250]
         x = pool.bow[subpool]
         x_text = pool.data[subpool]
         return x, x_text, subpool
 
     def next(self, pool, step):
-        x, x_text = self._subsample_pool()
+        x, x_text, subpool = self._subsample_pool(pool)
         #compute utility
         utility = self._compute_utility(x)
         #compute best snippet
-        snippet = self._compute_snippet(x, x_text)
+        snippet, snippet_text = self._compute_snippet(x_text)
         #select x, then s
-        raise NotImplementedError("next sequential not implemented")
+        print "Select best snippet"
+        seq = utility  
+        order = np.argsort(seq)[::-1]
+        index = [subpool[i] for i in order[:step]]
+
+        query = self._query(pool, snippet_text, index)
+        return query
 
 
 class Joint(StructuredLearner):
@@ -185,16 +225,16 @@ class Joint(StructuredLearner):
         return x, x_text, subpool
 
     def next(self, pool, step):
-        x, x_text, subpool = self._subsample_pool()
+        x, x_text, subpool = self._subsample_pool(pool)
 
         #compute utlity
         utility = self.compute_utility(x)
         #comput best snippet
-        snippet, snippet_text = self.compute_snippet(x, x_text)
+        snippet, snippet_text = self._compute_snippet(x_text)
         #multiply
         joint = utility * snippet 
         order = np.argsort(joint)[::-1]
         index = [subpool[i] for i in order[:step]]
         #build the query
-        query = self._query(pool, index)
+        query = self._query(pool, snippet_text, index)
         return query
