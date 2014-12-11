@@ -88,30 +88,10 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356):
         data = load_files(path, encoding="latin1", load_content=True,
                                    random_state=rnd)
         data.data = [keep_header_subject(text) for text in data.data]
-        # data_lst = list()
-        # target = list()
-        # filenames = list()
-        # for subset in ('train', 'test'):
-        #     data = cache[subset]
-        #     data_lst.extend(data.data)
-        #     target.extend(data.target)
-        #     filenames.extend(data.filenames)
-
-        # data.data = data_lst
-        # data.target = np.array(target)
-        # data.filenames = np.array(filenames)
     else:
         raise ValueError(
             "subset can only be 'train', 'test' or 'all', got '%s'" % subset)
     
-    # indices = ShuffleSplit(len(data.data), n_iter=1, test_size=percent, random_state=rnd)
-    # for train_ind, test_ind in indices:
-
-    #     data = bunch.Bunch(train=bunch.Bunch(data=[data.data[i] for i in train_ind], target=data.target[train_ind],
-    #                                          target_names=data.target_names),
-    #                           test=bunch.Bunch(data=[data.data[i] for i in test_ind], target=data.target[test_ind],
-    #                                          target_names=data.target_names))
-
     return data
 
 
