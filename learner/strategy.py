@@ -5,11 +5,11 @@ from sklearn.datasets import base as bunch
 
 class RandomSampling(Learner):
     """docstring for RandomSampling"""
+
     def __init__(self, model):
         super(RandomSampling, self).__init__(model)
 
 
-        
 class BootstrapFromEach(Learner):
     def __init__(self, model, seed=None):
         super(BootstrapFromEach, self).__init__(model, seed=seed)
@@ -34,8 +34,10 @@ class BootstrapFromEach(Learner):
 
         return chosen
 
+
 class ActiveLearner(Learner):
     """docstring for ActiveLearner"""
+
     def __init__(self, model, utility=None, seed=54321):
         super(ActiveLearner, self).__init__(model, seed=seed)
         self.utility = self.utility_base
@@ -44,13 +46,16 @@ class ActiveLearner(Learner):
     def utility_base(self, x):
         raise Exception("We need a utility function")
 
+
 class StructuredLearner(ActiveLearner):
     """docstring for StructuredLearner"""
+
     def __init__(self, model, snippet_fn=None, utility_fn=None):
         super(StructuredLearner, self).__init__(model)
         import copy
+
         self.snippet_model = copy.copy(model)
-        self.utility=utility_fn
+        self.utility = utility_fn
         self.snippet_utility = snippet_fn
         self.sent_tokenizer = None
         self.vct = None
@@ -69,20 +74,20 @@ class StructuredLearner(ActiveLearner):
             sent_train.extend(sents)  # at the sentences separately as individual documents
             labels.extend([t] * len(sents))  # Give the label of the document to all its sentences
 
-        return sent_train, labels #, dump
+        return sent_train, labels  # , dump
 
-    def fit(self, X,y, doc_text=None, limit=None):
-        #fit student
-        self.model.fit(X,y)
+    def fit(self, X, y, doc_text=None, limit=None):
+        # fit student
+        self.model.fit(X, y)
         #fit sentence
         sx, sy = self.convert_to_sentence(doc_text, y, self.sent_tokenizer, limit=limit)
         sx = self.vct.transform(sx)
         self.snippet_model.fit(sx, sy)
-        
+
         return self
 
-    def _utililty_rnd(self, X):
-        if X.shape[0] ==1:
+    def _utility_rnd(self, X):
+        if X.shape[0] == 1:
             return self.rnd_state.random_sample()
         else:
             return self.rnd_state.random_sample(X.shape[0])
@@ -102,11 +107,11 @@ class StructuredLearner(ActiveLearner):
 
     def _query(self, pool, snippets, indices):
         q = bunch.Bunch()
-        q.data   = pool.bow[indices] 
-        q.bow    = self.vct.transform(snippets[indices])
-        q.text   = pool.data[indices]
+        q.data = pool.bow[indices]
+        q.bow = self.vct.transform(snippets[indices])
+        q.text = pool.data[indices]
         q.target = pool.target[indices]
-        q.index  = indices
+        q.index = indices
         raise NotImplementedError("bow has to be the snippet bow")
 
     def _do_calibration(self, scores):
@@ -114,15 +119,15 @@ class StructuredLearner(ActiveLearner):
 
     def set_utility(self, util):
         if util == 'rnd':
-            self.utility=self._utililty_rnd
-        elif util=='unc':
-            self.utility=self._utililty_unc
+            self.utility = self._utility_rnd
+        elif util == 'unc':
+            self.utility = self._utility_unc
 
     def set_snippet_utility(self, util):
         if util == 'rnd':
-            self.utility=self._snippet_rnd
-        elif util=='max':
-            self.utility=self._snnipet_max
+            self.snippet_utility = self._snippet_rnd
+        elif util == 'sr':
+            self.snippet_utility = self._snippet_max
 
     def set_sent_tokenizer(self, tokenizer):
         self.sent_tokenizer = tokenizer
@@ -133,7 +138,7 @@ class StructuredLearner(ActiveLearner):
     ## SNIPPET UTILITY FUNCTIONS
     def _snippet_max(self, X):
         p = self.snippet_model.predict_proba(X)
-        if X.shape[0] ==1:
+        if X.shape[0] == 1:
             return p.max()
         else:
             return p.max(axis=1)
@@ -149,19 +154,26 @@ class StructuredLearner(ActiveLearner):
 
     def _create_matrix(self, x_sent, x_len):
         from scipy.sparse import lil_matrix
-        
+
         X = lil_matrix((len(x_sent), x_len))
-        
-        return X.tocsr()        
+
+        return X.tocsr()
+
+    def _get_sentences(self, x_text):
+        text = self.sent_tokenizer.batch_tokenize(x_text)
+        text_min = []
+        for sentences in text:
+            text_min.append([s for s in sentences if len(s.strip()) > 2])  # at least 2 characters
+        return text_min
 
     def _compute_snippet(self, x_text):
         """select the sentence with the best score for each document"""
         # scores = super(Joint, self)._compute_snippet(x_text)
-        x_sent= []
+
         x_sent_bow = []
         x_len = 0
-        for sentences in self.sent_tokenizer.batch_tokenize(x_text):
-            x_sent.append(sentences)
+        x_sent = self._get_sentences(x_text)
+        for sentences in x_sent:
             x_sent_bow.append(self.vct.transform(sentences))
             x_len = max(len(sentences), x_len)
 
@@ -172,22 +184,25 @@ class StructuredLearner(ActiveLearner):
             score_i[:s.shape[0]] = self.snippet_utility(s)
             x_scores[i] = score_i
 
-        x_scores = self.do_calibration(x_scores)
+        x_scores = self._do_calibration(x_scores)
 
         # sent_index = x_scores.todense().argsort(axis=1)  
         sent_index = x_scores.todense().argmax(axis=1)  ## within each document thesentence with the max score
+        sent_index = np.array(sent_index.reshape(sent_index.shape[0]))[0] ## reshape
         sent_max = x_scores.todense().max(axis=1)  ## within each document thesentence with the max score
         sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
 
         return sent_max, sent_text
 
     def __str__(self):
-        return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model, 
-            self.snippet_model, self.utility, self.snippet_utility)
+        return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model,
+                                                                               self.snippet_model, self.utility,
+                                                                               self.snippet_utility)
 
 
 class Sequential(StructuredLearner):
     """docstring for Sequential"""
+
     def __init__(self, model, snippet_fn=None, utility_fn=None):
         super(Sequential, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn)
 
@@ -201,14 +216,14 @@ class Sequential(StructuredLearner):
     def next(self, pool, step):
         x, x_text, subpool = self._subsample_pool(pool)
 
-        #compute utility
+        # compute utility
         utility = self._compute_utility(x)
 
         #compute best snippet
         snippet, snippet_text = self._compute_snippet(x_text)
 
         #select x, then s
-        seq = utility  
+        seq = utility
         order = np.argsort(seq)[::-1]
         index = [subpool[i] for i in order[:step]]
 
@@ -218,6 +233,7 @@ class Sequential(StructuredLearner):
 
 class Joint(StructuredLearner):
     """docstring for Joint"""
+
     def __init__(self, model, snippet_fn=None, utility_fn=None):
         super(Joint, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn)
 
@@ -232,14 +248,14 @@ class Joint(StructuredLearner):
     def next(self, pool, step):
         x, x_text, subpool = self._subsample_pool(pool)
 
-        #compute utlity
-        utility = self.compute_utility(x)
+        # compute utlity
+        utility = self._compute_utility(x)
 
         #comput best snippet
         snippet, snippet_text = self._compute_snippet(x_text)
 
         #multiply
-        joint = utility * snippet 
+        joint = utility * snippet
         order = np.argsort(joint)[::-1]
         index = [subpool[i] for i in order[:step]]
 
