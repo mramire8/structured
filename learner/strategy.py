@@ -48,8 +48,8 @@ class ActiveLearner(Learner):
 
 
 class StructuredLearner(ActiveLearner):
-    """docstring for StructuredLearner"""
-
+    """docstring for StructuredLearner
+    """
     def __init__(self, model, snippet_fn=None, utility_fn=None):
         super(StructuredLearner, self).__init__(model)
         import copy
@@ -63,11 +63,18 @@ class StructuredLearner(ActiveLearner):
 
     @staticmethod
     def convert_to_sentence(X_text, y, sent_tk, limit=None):
+        """
+        >>> import nltk
+        >>> sent_tk = nltk.data.load('tokenizers/punkt/english.pickle')
+        >>> print StructuredLearner.convert_to_sentence(['hi there. you rock. y!'], [1], sent_tk, limit=2)
+        (['hi there.', 'you rock.'], [1, 1])
+        """
         sent_train = []
         labels = []
 
         ## Convert the documents into sentences: train
-        for t, sentences in zip(y, sent_tk.batch_tokenize(X_text)):
+        # for t, sentences in zip(y, sent_tk.batch_tokenize(X_text)):
+        for t, sentences in zip(y, sent_tk.tokenize_sents(X_text)):
             if limit > 0:
                 sents = [s for s in sentences if len(s.strip()) > limit]
             elif limit == 0 or limit is None:
