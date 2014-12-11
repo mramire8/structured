@@ -65,7 +65,8 @@ def load_imdb(path, subset="all", shuffle=True, rnd=2356):
         data_lst = data_lst[indices]
         data.train.data = data_lst.tolist()
 
- 
+    data = minimum_size(data)
+
     return data
 
 
@@ -91,7 +92,30 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356):
     else:
         raise ValueError(
             "subset can only be 'train', 'test' or 'all', got '%s'" % subset)
-    
+
+    if shuffle:
+        random_state = np.random.RandomState(rnd)
+        indices = np.arange(data.train.target.shape[0])
+        random_state.shuffle(indices)
+        data.train.filenames = data.train.filenames[indices]
+        data.train.target = data.train.target[indices]
+        # Use an object array to shuffle: avoids memory copy
+        data_lst = np.array(data.train.data, dtype=object)
+        data_lst = data_lst[indices]
+        data.train.data = data_lst.tolist()
+
+    data = minimum_size(data)
+    return data
+
+
+def minimum_size(data):
+
+    for part in data.keys():
+        if len(data[part].data) != len(data[part].target):
+            raise Exception("There is something wrong with the data")
+        filtered = [(x, y) for x, y in zip(data[part].data, data[part].target) if len(x.strip()) >= 10]
+        data[part].data = [x for x, _ in filtered]
+        data[part].target = np.array([y for _, y in filtered])
     return data
 
 
@@ -103,6 +127,7 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
     cat = None
     if category is not None:
         cat = categories[category]
+        
     data = bunch.Bunch()
     data.train = fetch_20newsgroups(subset='train', categories=cat, remove=('headers','footers', 'quotes'),
                                     shuffle=shuffle, random_state=rnd)
@@ -115,6 +140,8 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
     data.test.data = [keep_header_subject(text) for text in data.test.data]
 
     categories = data.train.target_names
+
+    data = minimum_size(data)
 
     return data
 

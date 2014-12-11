@@ -1,4 +1,4 @@
-__author__="mramire8"
+__author__ = "mramire8"
 
 import os, sys
 
@@ -15,6 +15,7 @@ from collections import defaultdict
 from learner.strategy import BootstrapFromEach
 from sklearn.datasets import base as bunch
 
+
 class Experiment(object):
     """Main experiment class to run according to configuration"""
     # def __init__(self, dataname, learner, expert, trials=5, folds=1, split=.5, costfn=None):
@@ -24,10 +25,10 @@ class Experiment(object):
         self.dataname = dataname
         self.data_cat = None
         self.config = config
-        self.data     = None
-        self.trials    = None
-        self.folds    = None
-        self.split    = None
+        self.data = None
+        self.trials = None
+        self.folds = None
+        self.split = None
         self.costfn = None
         self.budget = None
         self.max_iteration = None
@@ -46,30 +47,30 @@ class Experiment(object):
 
     def cross_validation_data(self, data, **config):
         n = data.train.target.shape[0]
-        cv= None
+        cv = None
 
         if config['folds'] == 1 and 'test' not in data.keys():
             cv = cross_validation.ShuffleSplit(n, n_iter=config['trials'], test_size=config['split'],
-                random_state=self.rnd_state)
+                                               random_state=self.rnd_state)
             config['folds'] = 1
         elif 'test' in data.keys():
             cv = cross_validation.ShuffleSplit(n, n_iter=config['trials'], test_size=0.0,
-                random_state=self.rnd_state)
+                                               random_state=self.rnd_state)
             config['folds'] = 1
 
-        else: 
+        else:
             cv = cross_validation.KFold(n, n_folds=config['folds'], random_state=self.rnd_state)
         return cv
 
     def _setup_options(self, config_obj):
 
-        #experiment related config
+        # experiment related config
         config = cfgutil.get_section_options(config_obj, 'experiment')
         self.trials = config['trials']
         self.folds = config['folds']
         self.max_iteration = config['maxiter']
-        self.step     = config['stepsize']
-        self.budget     = config['budget']
+        self.step = config['stepsize']
+        self.budget = config['budget']
         self.prefix = config['fileprefix']
         self.output = config['outputdir']
         self.seed = config['seed']
@@ -92,15 +93,15 @@ class Experiment(object):
         self._setup_options(self.config)
         self.data = datautil.load_dataset(self.dataname, categories=self.data_cat, rnd=self.rnd_state, shuffle=True)
         self.data = self.vectorize(self.data)
-        cv = self.cross_validation_data(self.data,folds=self.folds, trials=self.trials, split=self.split)
-        
+        cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
+
         for train_index, test_index in cv:
             ## get the data of this cv iteration
             train, test = exputil.sample_data(self.data, train_index, test_index)
 
             ## get the expert and student
-            learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'), 
-                vct=self.vct, sent_tk=self.sent_tokenizer)
+            learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
+                                          vct=self.vct, sent_tk=self.sent_tokenizer)
 
             expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'))
 
@@ -108,15 +109,15 @@ class Experiment(object):
 
             ## do active learning
             results = self.main_loop(learner, expert, self.budget, self.bootstrap_size, train, test)
-            
+
             ## save the results
             trial.append(results)
         self.report_results(trial, self.dataname)
 
     def bootstrap(self, pool, bt, train):
-        #get a bootstrap
+        # get a bootstrap
         bt_obj = BootstrapFromEach(None, seed=self.seed)
-        initial = bt_obj.bootstrap(pool,step=bt, shuffle=False)
+        initial = bt_obj.bootstrap(pool, step=bt, shuffle=False)
 
         # #bundle to work with it
         # init_data = bunch.Bunch()
@@ -138,7 +139,7 @@ class Experiment(object):
         pred_proba = learner.predict_proba(test.bow)
         accu = metrics.accuracy_score(test.target, prediction)
         auc = metrics.roc_auc_score(test.target, pred_proba)
-        return {'auc':auc, 'accu':accu}
+        return {'auc': auc, 'accu': accu}
 
     def evaluate_oracle(self, query, predictions, labels=None):
         cm = metrics.confusion_matrix(query.target, predictions, labels=labels)
@@ -163,18 +164,19 @@ class Experiment(object):
         y = train.target
         ## get training document text
         text = pool.data[train.index]
-        
-        return learner.fit(X, y, doc_text=text) 
+
+        return learner.fit(X, y, doc_text=text)
 
     def main_loop(self, learner, expert, budget, bootstrap, pool, test):
         from  collections import deque
+
         iteration = 0
         current_cost = 0
         rnd_set = range(pool.target.shape[0])
         self.rnd_state.shuffle(rnd_set)
         remaining = deque(rnd_set)
         pool.remaining = remaining
-        
+
         ## record keeping
         results = self._start_results()
 
@@ -183,15 +185,15 @@ class Experiment(object):
 
         while current_cost <= budget and iteration <= self.max_iteration:
             if iteration == 0:
-                #bootstrap
+                # bootstrap
                 train = self.bootstrap(pool, bootstrap, train)
-                learner=self.retrain(learner, pool, train)
+                learner = self.retrain(learner, pool, train)
             else:
                 ## select query and query labels
                 query = learner.next(pool, self.step)
                 labels = expert.label(query.bow)
 
-                #update pool and cost
+                # update pool and cost
                 pool, train = self.update_pool(pool, query, labels, train)
                 current_cost = self.update_cost(current_cost, query)
 
@@ -202,14 +204,14 @@ class Experiment(object):
                 step_results = self.evaluate(learner, test)
                 step_oracle = self.evaluate_oracle(query, labels)
                 results = self.update_run_results(results, step_results, step_oracle, current_cost)
-            iteration +=1
+            iteration += 1
         return results
 
     def _start_results(self):
         r = {}
-        r['accuracy']     = defaultdict(lambda: [])
-        r['auc']        = defaultdict(lambda: [])
-        r['ora_accu']    = defaultdict(lambda: [])
+        r['accuracy'] = defaultdict(lambda: [])
+        r['auc'] = defaultdict(lambda: [])
+        r['ora_accu'] = defaultdict(lambda: [])
         return r
 
     def report_results(self, results):
