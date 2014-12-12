@@ -163,9 +163,10 @@ class Experiment(object):
         results['auc'][iteration].append(step['auc'])
         results['ora_accu'][iteration].append(oracle)
         if self.verbose:
-            if iteration==0:
-                print "IT\tACCU\tAUC"
-            print "{0}\t{1:.3f}\t{2:.3f}".format(iteration, step['accuracy'],step['auc'])
+            if iteration==self.step:
+                print "IT\tACCU\tAUC\tT0\tF1\tF0\tT1"
+            print "{0}\t{1:.3f}\t{2:.3f}".format(iteration, step['accuracy'],step['auc']),
+            print "\t".join(["{0:.3f}".format(x) for x in np.reshape(oracle,4)])
         return results
 
     def update_pool(self, pool, query, labels, train):
@@ -206,7 +207,7 @@ class Experiment(object):
                 train = self.bootstrap(pool, bootstrap, train)
                 learner = self.retrain(learner, pool, train)
             else:
-                ## select query and query labels
+                # select query and query labels
                 query = learner.next(pool, self.step)
                 labels = expert.label(query.bow)
 
@@ -214,12 +215,14 @@ class Experiment(object):
                 pool, train = self.update_pool(pool, query, labels, train)
                 current_cost = self.update_cost(current_cost, query)
 
-                #re-train the learner
+                # re-train the learner
                 learner = self.retrain(learner, pool, train)
 
-                #evaluate
+                # evaluate
                 step_results = self.evaluate(learner, test)
                 step_oracle = self.evaluate_oracle(query, labels)
+
+                # record results
                 results = self.update_run_results(results, step_results, step_oracle, current_cost)
             iteration += 1
         return results
