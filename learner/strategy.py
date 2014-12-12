@@ -60,6 +60,7 @@ class StructuredLearner(ActiveLearner):
         self.sent_tokenizer = None
         self.vct = None
         self.calibrate = None
+        self.sent_rnd = np.random.RandomState(self.seed)
 
     @staticmethod
     def convert_to_sentence(X_text, y, sent_tk, limit=None):
@@ -166,7 +167,7 @@ class StructuredLearner(ActiveLearner):
             return p.max(axis=1)
 
     def _snippet_rnd(self, X):
-        return self.rnd_state.random_sample(X.shape[0])
+        return self.sent_rnd.random_sample(X.shape[0])
 
     def _snippet_first(self, X):
         n = X.shape[0]
