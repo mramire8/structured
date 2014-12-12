@@ -13,6 +13,7 @@ def sample_data(data, train_idx, test_idx):
         sample.train.bow = data.bow[train_idx]
         sample.test.bow = data.bow[test_idx]
         sample.target_names = data.target_names
+        sample.train.remaining = []
     else:
         ## Just shuffle the data
         sample = data
@@ -21,7 +22,7 @@ def sample_data(data, train_idx, test_idx):
         sample.train.data = data_lst
         sample.train.target = data.train.target[train_idx]
         sample.train.bow = data.train.bow[train_idx]
-
+        sample.train.remaining = []
     return sample.train, sample.test
 
 def get_vectorizer(config):

@@ -120,16 +120,16 @@ class StructuredLearner(ActiveLearner):
         q.text = pool.data[indices]
         q.target = pool.target[indices]
         q.index = indices
-        raise NotImplementedError("bow has to be the snippet bow")
+        return q
 
     def _do_calibration(self, scores, y_pred):
         if self.calibrate:
             from sklearn import preprocessing
-
-            c0_scores = preprocessing.scale(scores[y_pred == 0])
-            c1_scores = preprocessing.scale(scores[y_pred == 1])
-            scores[y_pred == 0] = c0_scores
-            scores[y_pred == 1] = c1_scores
+            # prediction +1 to preserve the spcarcity of the matrix
+            c0_scores = preprocessing.scale(scores[y_pred == (0+1)])
+            c1_scores = preprocessing.scale(scores[y_pred == (1+1)])
+            scores[y_pred == (0+1)] = c0_scores
+            scores[y_pred == (1+1)] = c1_scores
             return scores
         else:
             return scores
@@ -145,6 +145,8 @@ class StructuredLearner(ActiveLearner):
             self.snippet_utility = self._snippet_rnd
         elif util == 'sr':
             self.snippet_utility = self._snippet_max
+        elif util == 'first1':
+            self.snippet_utility = self._snippet_first
 
     def set_sent_tokenizer(self, tokenizer):
         self.sent_tokenizer = tokenizer
@@ -180,7 +182,7 @@ class StructuredLearner(ActiveLearner):
         return X.tocsr()
 
     def _get_sentences(self, x_text):
-        text = self.sent_tokenizer.batch_tokenize(x_text)
+        text = self.sent_tokenizer.tokenize_sents(x_text)
         text_min = []
         for sentences in text:
             text_min.append([s for s in sentences if len(s.strip()) > 2])  # at least 2 characters
@@ -202,14 +204,15 @@ class StructuredLearner(ActiveLearner):
 
         for i, s in enumerate(x_sent_bow):
             score_i = np.zeros(x_len)
-            y_pred_i = np.ones(x_len) * -1
+            y_pred_i = np.zeros(x_len)
             score_i[:s.shape[0]] = self.snippet_utility(s)
-            y_pred_i[:s.shape[0]] = self.snippet_model.predict(s)
+            y_pred_i[:s.shape[0]] = self.snippet_model.predict(s) + 1  # add 1 to avoid prediction 0, keep the sparsity
             x_scores[i] = score_i
             y_pred[i] = y_pred_i
 
         x_scores = self._do_calibration(x_scores, y_pred)
 
+        #Note: this works only if the max score is always > 0
         sent_index = x_scores.todense().argmax(axis=1)  ## within each document thesentence with the max score
         sent_index = np.array(sent_index.reshape(sent_index.shape[0]))[0] ## reshape
         sent_max = x_scores.todense().max(axis=1)  ## within each document thesentence with the max score
@@ -250,7 +253,7 @@ class Sequential(StructuredLearner):
         order = np.argsort(seq)[::-1]
         index = [subpool[i] for i in order[:step]]
 
-        query = self._query(pool, snippet_text[order], index)
+        query = self._query(pool, snippet_text[order][:step], index)
         return query
 
 
@@ -283,5 +286,5 @@ class Joint(StructuredLearner):
         index = [subpool[i] for i in order[:step]]
 
         #build the query
-        query = self._query(pool, snippet_text, index)
+        query = self._query(pool, snippet_text[order][:step], index)
         return query

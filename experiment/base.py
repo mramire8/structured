@@ -133,7 +133,7 @@ class Experiment(object):
 
         # update initial training data
         train.index = initial
-        train.target = pool.target[initial]
+        train.target = pool.target[initial].tolist()
         return train
 
     def update_cost(self, current_cost, query):
@@ -143,7 +143,7 @@ class Experiment(object):
         prediction = learner.predict(test.bow)
         pred_proba = learner.predict_proba(test.bow)
         accu = metrics.accuracy_score(test.target, prediction)
-        auc = metrics.roc_auc_score(test.target, pred_proba)
+        auc = metrics.roc_auc_score(test.target, pred_proba[:,1])
         return {'auc': auc, 'accu': accu}
 
     def evaluate_oracle(self, query, predictions, labels=None):
@@ -161,7 +161,8 @@ class Experiment(object):
         for q, t in zip(query.index, labels):
             pool.remaining.remove(q)
             train.index.append(q)
-            train.target.extend(t)
+            train.target.append(t)
+        print train.index
         return pool, train
 
     def retrain(self, learner, pool, train):
@@ -186,7 +187,7 @@ class Experiment(object):
         results = self._start_results()
 
         ## keep track of current training
-        train = bunch.Bunch(index=[], target=np.array([]))
+        train = bunch.Bunch(index=[], target=[])
 
         while current_cost <= budget and iteration <= self.max_iteration:
             if iteration == 0:
