@@ -61,15 +61,15 @@ def get_classifier(cl_name, **kwargs):
     return clf
 
 
-def get_learner(learn_config, vct=None, sent_tk=None):
+def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
     from learner.base import Learner
     cl_name = learn_config['model']
     clf = get_classifier(cl_name, parameter=learn_config['parameter'])
     learner = Learner(clf)
     if learn_config['type'] == 'joint':
-        learner = Joint(clf, snippet_fn=None, utility_fn=None)
+        learner = Joint(clf, snippet_fn=None, utility_fn=None, seed=seed)
     elif learn_config['type'] == 'sequential':
-        learner = Sequential(clf, snippet_fn=None, utility_fn=None)
+        learner = Sequential(clf, snippet_fn=None, utility_fn=None, seed=seed)
     else:
         raise ValueError("We don't know {} leaner".format(learn_config['type']))
     learner.set_utility(learn_config['utility'])

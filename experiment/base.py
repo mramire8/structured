@@ -99,14 +99,14 @@ class Experiment(object):
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.rnd_state, shuffle=True)
         self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
-
+        t = 0
         for train_index, test_index in cv:
             ## get the data of this cv iteration
             train, test = exputil.sample_data(self.data, train_index, test_index)
 
             ## get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
-                                          vct=self.vct, sent_tk=self.sent_tokenizer)
+                                          vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t*10+10))
 
             expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'))
 
@@ -117,6 +117,7 @@ class Experiment(object):
 
             ## save the results
             trial.append(results)
+            t += 1
         self.report_results(trial, self.dataname)
 
     def bootstrap(self, pool, bt, train):
@@ -162,7 +163,7 @@ class Experiment(object):
             pool.remaining.remove(q)
             train.index.append(q)
             train.target.append(t)
-        print train.index
+        print train.index[50:]
         return pool, train
 
     def retrain(self, learner, pool, train):

@@ -38,7 +38,7 @@ class BootstrapFromEach(Learner):
 class ActiveLearner(Learner):
     """docstring for ActiveLearner"""
 
-    def __init__(self, model, utility=None, seed=54321):
+    def __init__(self, model, utility=None, seed=1):
         super(ActiveLearner, self).__init__(model, seed=seed)
         self.utility = self.utility_base
         self.rnd_state = np.random.RandomState(self.seed)
@@ -50,8 +50,8 @@ class ActiveLearner(Learner):
 class StructuredLearner(ActiveLearner):
     """docstring for StructuredLearner
     """
-    def __init__(self, model, snippet_fn=None, utility_fn=None):
-        super(StructuredLearner, self).__init__(model)
+    def __init__(self, model, snippet_fn=None, utility_fn=None, seed=1):
+        super(StructuredLearner, self).__init__(model, seed=seed)
         import copy
 
         self.snippet_model = copy.copy(model)
@@ -230,8 +230,8 @@ class StructuredLearner(ActiveLearner):
 class Sequential(StructuredLearner):
     """docstring for Sequential"""
 
-    def __init__(self, model, snippet_fn=None, utility_fn=None):
-        super(Sequential, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn)
+    def __init__(self, model, snippet_fn=None, utility_fn=None, seed=1):
+        super(Sequential, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn, seed=seed)
 
     def _subsample_pool(self, pool):
         subpool = list(pool.remaining)
@@ -261,8 +261,8 @@ class Sequential(StructuredLearner):
 class Joint(StructuredLearner):
     """docstring for Joint"""
 
-    def __init__(self, model, snippet_fn=None, utility_fn=None):
-        super(Joint, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn)
+    def __init__(self, model, snippet_fn=None, utility_fn=None, seed=1):
+        super(Joint, self).__init__(model, snippet_fn=snippet_fn, utility_fn=utility_fn, seed=seed)
 
     def _subsample_pool(self, pool):
         subpool = list(pool.remaining)
