@@ -168,7 +168,7 @@ class Experiment(object):
             pool.remaining.remove(q)
             train.index.append(q)
             train.target.append(t)
-        print train.index[50:]
+
         return pool, train
 
     def retrain(self, learner, pool, train):
