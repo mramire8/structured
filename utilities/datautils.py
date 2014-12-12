@@ -134,6 +134,17 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
 
     data = minimum_size(data)
 
+    if shuffle:
+        random_state = np.random.RandomState(rnd)
+        indices = np.arange(data.train.target.shape[0])
+        random_state.shuffle(indices)
+        data.train.filenames = data.train.filenames[indices]
+        data.train.target = data.train.target[indices]
+        # Use an object array to shuffle: avoids memory copy
+        data_lst = np.array(data.train.data, dtype=object)
+        data_lst = data_lst[indices]
+        data.train.data = data_lst.tolist()
+
     return data
 
 

@@ -15,6 +15,16 @@ class BootstrapFromEach(Learner):
         super(BootstrapFromEach, self).__init__(model, seed=seed)
 
     def bootstrap(self, pool, step=2, shuffle=False):
+        """
+        bootstrap by selecting step/2 instances per class, in a binary dataset
+        :param pool: bunch containing the available data
+            pool contains:
+                target: true labels of the examples
+                ramaining: list of available examples in the pool to use
+        :param step: how many examples to select in total
+        :param shuffle: shuffle the data before selecting or not (important for sequential methods)
+        :return: list of indices of selected examples
+        """
         from collections import defaultdict
 
         step = int(step / 2)
@@ -36,7 +46,7 @@ class BootstrapFromEach(Learner):
 
 
 class ActiveLearner(Learner):
-    """docstring for ActiveLearner"""
+    """ActiveLearner class that defines a simple utility based pool sampling strategy"""
 
     def __init__(self, model, utility=None, seed=1):
         super(ActiveLearner, self).__init__(model, seed=seed)
@@ -48,8 +58,7 @@ class ActiveLearner(Learner):
 
 
 class StructuredLearner(ActiveLearner):
-    """docstring for StructuredLearner
-    """
+    """StructuredLearner is the Structured reading implementation """
     def __init__(self, model, snippet_fn=None, utility_fn=None, seed=1):
         super(StructuredLearner, self).__init__(model, seed=seed)
         import copy

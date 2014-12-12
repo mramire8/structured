@@ -97,7 +97,7 @@ class Experiment(object):
         print self.get_name()
         trial = []
         self._setup_options(self.config)
-        self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.rnd_state, shuffle=True)
+        self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed, shuffle=True)
         self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
         t = 0
@@ -132,14 +132,7 @@ class Experiment(object):
         bt_obj = BootstrapFromEach(None, seed=self.seed)
         initial = bt_obj.bootstrap(pool, step=bt, shuffle=False)
 
-        # #bundle to work with it
-        # init_data = bunch.Bunch()
-        # init_data.index = initial
-        # init_data.bow = pool.bow[initial]
-        # init_data.data= pool.data[initial]
-        # init_data.target = pool.target[initial]
-
-        # update initial training data
+       # update initial training data
         train.index = initial
         train.target = pool.target[initial].tolist()
         return train
@@ -175,6 +168,7 @@ class Experiment(object):
             pool.remaining.remove(q)
             train.index.append(q)
             train.target.append(t)
+        print train.index[50:]
         return pool, train
 
     def retrain(self, learner, pool, train):
