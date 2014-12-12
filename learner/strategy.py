@@ -85,6 +85,9 @@ class StructuredLearner(ActiveLearner):
 
         return sent_train, labels  # , dump
 
+    def get_name(self):
+        return "{}{}".format(self.utility.__name__, self.snippet_utility.__name__)
+
     def fit(self, X, y, doc_text=None, limit=None):
         # fit student
         self.model.fit(X, y)

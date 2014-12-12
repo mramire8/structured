@@ -38,6 +38,7 @@ class Experiment(object):
         self.step = None
         self.bootstrap_size = None
         self.seed = None
+        self.output = None
 
         self.rnd_state = np.random.RandomState(32564)
         self.remaining = None
@@ -93,7 +94,7 @@ class Experiment(object):
         self.sent_tokenizer = exputil.get_tokenizer(config['sent_tokenizer'])
 
     def start(self):
-
+        print self.get_name()
         trial = []
         self._setup_options(self.config)
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.rnd_state, shuffle=True)
@@ -118,7 +119,13 @@ class Experiment(object):
             ## save the results
             trial.append(results)
             t += 1
-        self.report_results(trial, self.dataname)
+        self.report_results(trial)
+
+    def get_name(self):
+        cfg = cfgutil.get_section_options(self.config, 'learner')
+
+        name = "data-{}-lrn-{}-ut-{}-snip-{}-cal-{}".format(self.dataname,cfg['type'], cfg['utility'],cfg['snippet'],cfg['calibrate'])
+        return name
 
     def bootstrap(self, pool, bt, train):
         # get a bootstrap
@@ -145,16 +152,20 @@ class Experiment(object):
         pred_proba = learner.predict_proba(test.bow)
         accu = metrics.accuracy_score(test.target, prediction)
         auc = metrics.roc_auc_score(test.target, pred_proba[:,1])
-        return {'auc': auc, 'accu': accu}
+        return {'auc': auc, 'accuracy': accu}
 
     def evaluate_oracle(self, query, predictions, labels=None):
         cm = metrics.confusion_matrix(query.target, predictions, labels=labels)
         return cm
 
     def update_run_results(self, results, step, oracle, iteration):
-        results['accuracy'][iteration].append(step['accu'])
+        results['accuracy'][iteration].append(step['accuracy'])
         results['auc'][iteration].append(step['auc'])
         results['ora_accu'][iteration].append(oracle)
+        if self.verbose:
+            if iteration==0:
+                print "IT\tACCU\tAUC"
+            print "{0}\t{1:.3f}\t{2:.3f}".format(iteration, step['accuracy'],step['auc'])
         return results
 
     def update_pool(self, pool, query, labels, train):
@@ -163,7 +174,6 @@ class Experiment(object):
             pool.remaining.remove(q)
             train.index.append(q)
             train.target.append(t)
-        print train.index[50:]
         return pool, train
 
     def retrain(self, learner, pool, train):
@@ -190,7 +200,7 @@ class Experiment(object):
         ## keep track of current training
         train = bunch.Bunch(index=[], target=[])
 
-        while current_cost <= budget and iteration <= self.max_iteration:
+        while current_cost <= budget and iteration <= self.max_iteration and pool.remaining > self.step:
             if iteration == 0:
                 # bootstrap
                 train = self.bootstrap(pool, bootstrap, train)
@@ -221,7 +231,48 @@ class Experiment(object):
         r['ora_accu'] = defaultdict(lambda: [])
         return r
 
+    def _get_iteration(self, iteration):
+        cost = sorted(iteration.keys())
+        perf = [np.mean(iteration[xi]) for xi in cost]
+        std = [np.std(iteration[xi]) for xi in cost]
+        n = [np.size(iteration[xi]) for xi in cost]
+
+        return cost, perf, std, n
+
+    def _get_cm_iteration(self, iteration):
+        cost = sorted(iteration.keys())
+        perf = [np.mean(iteration[xi],axis=0).reshape(4) for xi in cost]
+        std = [np.std(iteration[xi]) for xi in cost]
+        n = [np.size(iteration[xi]) for xi in cost]
+
+        return cost, perf, std, n
+
     def report_results(self, results):
-        print results
-        raise NotImplementedError("report results not implemented yet")
+        output_name = self.output + "/" + self.get_name()
+        if not os.path.exists(self.output):
+            os.makedirs(self.output)
+
+        accu = []
+        auc = []
+        ora = []
+        cost = []
+        for tr in results:
+            c, p, s, n = self._get_iteration(tr['accuracy'])
+            accu.append(p)
+            c, p, s, n = self._get_iteration(tr['auc'])
+            auc.append(p)
+            cost.append(c)
+            c, p, s, n = self._get_cm_iteration(tr['ora_accu'])
+            ora.append(p)
+
+        p = np.mean(accu, axis=0)
+        c = np.mean(cost, axis=0)
+        s = np.std(accu, axis=0)
+        exputil.print_file(c,p,s,open(output_name+"-accu.txt", "w"))
+        p = np.mean(auc, axis=0)
+        s = np.std(auc, axis=0)
+        exputil.print_file(c,p,s,open(output_name+"-auc.txt", "w"))
+        p = np.mean(ora, axis=0)
+        s = np.std(ora, axis=0)
+        exputil.print_cm_file(c,p,s,open(output_name+"-oracle-cm.txt", "w"))
 
