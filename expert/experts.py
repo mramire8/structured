@@ -8,14 +8,12 @@ class TrueExpert(BaseExpert):
         super(TrueExpert, self).__init__(oracle)
 
     def label(self, data, y=None):
-        if 'target' in data.keys():
-            return data.target
-        elif y is None:
+        if y is None:
             raise Exception("True labels are missing")
         else:
             return y
 
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, vct=None):
         return self
 
 
@@ -28,7 +26,7 @@ class PredictingExpert(BaseExpert):
     def label(self, data, y=None):
         return self.oracle.predict(data)
 
-    def fit(self, data, y=None):
+    def fit(self, data, y=None, vct=None):
         if y is not None:
             self.oracle.fit(data.bow, y)
         else:
