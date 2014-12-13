@@ -132,5 +132,5 @@ def print_cm_file(cost, mean, std, f):
     # f = open(file_name, "w")
     f.write("COST\tT0\tF1\tF0\tT1\tSTDEV\n")
     for a, b, c in zip(cost, mean, std):
-        f.write("{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}\t{3:.3f}\n".format(a, *b))
+        f.write("{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}\t{4:.3f}\n".format(a, *b))
     f.close()
