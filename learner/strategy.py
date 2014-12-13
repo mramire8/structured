@@ -139,8 +139,10 @@ class StructuredLearner(ActiveLearner):
         if self.calibrate:
             from sklearn import preprocessing
             # prediction +1 to preserve the spcarcity of the matrix
-            c0_scores = preprocessing.scale(scores[y_pred == (0+1)])
-            c1_scores = preprocessing.scale(scores[y_pred == (1+1)])
+            c0_scores = scores[y_pred == (0+1)]
+            c1_scores = scores[y_pred == (1+1)]
+            c0_scores = preprocessing.scale(c0_scores)
+            c1_scores = preprocessing.scale(c1_scores)
             scores[y_pred == (0+1)] = c0_scores
             scores[y_pred == (1+1)] = c1_scores
             return scores
@@ -190,9 +192,10 @@ class StructuredLearner(ActiveLearner):
     def _create_matrix(self, x_sent, x_len):
         from scipy.sparse import lil_matrix
 
-        X = lil_matrix((len(x_sent), x_len))
+        # X = lil_matrix((len(x_sent), x_len))
+        X = np.zeros((len(x_sent), x_len))
 
-        return X.tocsr()
+        return X
 
     def _get_sentences(self, x_text):
         text = self.sent_tokenizer.tokenize_sents(x_text)
@@ -226,7 +229,7 @@ class StructuredLearner(ActiveLearner):
         x_scores = self._do_calibration(x_scores, y_pred)
 
         #Note: this works only if the max score is always > 0
-        sent_index = x_scores.todense().argmax(axis=1)  ## within each document thesentence with the max score
+        sent_index = x_scores.argmax(axis=1)  ## within each document thesentence with the max score
         sent_index = np.array(sent_index.reshape(sent_index.shape[0]))[0] ## reshape
         sent_max = x_scores.todense().max(axis=1)  ## within each document thesentence with the max score
         sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
