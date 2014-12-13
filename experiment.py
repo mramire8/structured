@@ -23,12 +23,15 @@ ap.add_argument('--config',
 
 
 def main():
+    from time import time
+    t0 = time()
     args = ap.parse_args()
     print args.train
     config = cfgutils.get_config(args.config)
     experiment = Experiment(args.train, config, verbose=args.verbose)
     experiment.start()
-
+    t1 = time()
+    print "Elapsed time: %.3f secs (%.3f mins)" % ((t1-t0), (t1-t0)/60)
 
 if __name__ == "__main__":
     main()

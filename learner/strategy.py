@@ -207,7 +207,7 @@ class StructuredLearner(ActiveLearner):
     def _compute_snippet(self, x_text):
         """select the sentence with the best score for each document"""
         # scores = super(Joint, self)._compute_snippet(x_text)
-
+        import sys
         x_sent_bow = []
         x_len = 0
         x_sent = self._get_sentences(x_text)
@@ -219,7 +219,7 @@ class StructuredLearner(ActiveLearner):
         y_pred = self._create_matrix(x_sent, x_len)
 
         for i, s in enumerate(x_sent_bow):
-            score_i = np.zeros(x_len)
+            score_i = np.ones(x_len) * -1 * sys.maxint
             y_pred_i = np.zeros(x_len)
             score_i[:s.shape[0]] = self.snippet_utility(s)
             y_pred_i[:s.shape[0]] = self.snippet_model.predict(s) + 1  # add 1 to avoid prediction 0, keep the sparsity
@@ -230,8 +230,8 @@ class StructuredLearner(ActiveLearner):
 
         #Note: this works only if the max score is always > 0
         sent_index = x_scores.argmax(axis=1)  ## within each document thesentence with the max score
-        sent_index = np.array(sent_index.reshape(sent_index.shape[0]))[0] ## reshape
-        sent_max = x_scores.todense().max(axis=1)  ## within each document thesentence with the max score
+        # sent_index = np.array(sent_index.reshape(sent_index.shape[0]))[0] ## reshape, when sparse matrix
+        sent_max = x_scores.max(axis=1)  ## within each document thesentence with the max score
         sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
         sent_text = np.array(sent_text, dtype=object)
         return sent_max, sent_text
