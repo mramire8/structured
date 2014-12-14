@@ -19,9 +19,10 @@ from sklearn.datasets import base as bunch
 class Experiment(object):
     """Main experiment class to run according to configuration"""
     # def __init__(self, dataname, learner, expert, trials=5, folds=1, split=.5, costfn=None):
-    def __init__(self, dataname, config, verbose=False):
+    def __init__(self, dataname, config, verbose=False, debug=False):
         super(Experiment, self).__init__()
         self.verbose = verbose
+        self.debug = debug
         self.config = config
 
         self.dataname = dataname
@@ -218,7 +219,9 @@ class Experiment(object):
 
                 # record results
                 results = self.update_run_results(results, step_results, step_oracle, current_cost)
-            iteration += 1
+                if self.debug:
+                    self._debug(learner, expert, query)
+                iteration += 1
         return results
 
     def _start_results(self):
@@ -273,3 +276,9 @@ class Experiment(object):
         s = np.std(ora, axis=0)
         exputil.print_cm_file(c,p,s,open(output_name+"-oracle-cm.txt", "w"))
 
+    def _debug(self, learner, expert, query):
+        st_prob = learner.snippet_model.predict_proba(query.bow)
+        ex_prob = expert.oracle.predict_proba(query.bow)
+        for i in len(query.index):
+            print "{}\t{}\t{}\t{}\t{}\t{}\t{}".format(query.index[i], query.text[i], query.target[i],
+                                                      st_prob[i][0], st_prob[i][1], ex_prob[i][0], ex_prob[i][1])

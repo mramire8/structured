@@ -160,7 +160,7 @@ class StructuredLearner(ActiveLearner):
             self.snippet_utility = self._snippet_rnd
         elif util == 'sr':
             self.snippet_utility = self._snippet_max
-        elif util == 'first1':
+        elif util == 'first1' or util == 'true':
             self.snippet_utility = self._snippet_first
 
     def set_sent_tokenizer(self, tokenizer):

@@ -14,6 +14,10 @@ ap.add_argument('--verbose',
                 action='store_true',
                 help='to print progress of experiment')
 
+ap.add_argument('--debug',
+                action='store_true',
+                help='to print query details of experiment')
+
 
 ap.add_argument('--config',
                 metavar='CONFIG_FILE',
@@ -28,7 +32,7 @@ def main():
     args = ap.parse_args()
     print args.train
     config = cfgutils.get_config(args.config)
-    experiment = Experiment(args.train, config, verbose=args.verbose)
+    experiment = Experiment(args.train, config, verbose=args.verbose, debug=args.debug)
     experiment.start()
     t1 = time()
     print "Elapsed time: %.3f secs (%.3f mins)" % ((t1-t0), (t1-t0)/60)
