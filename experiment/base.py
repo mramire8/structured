@@ -214,7 +214,7 @@ class Experiment(object):
 
                 # evaluate
                 step_results = self.evaluate(learner, test)
-                step_oracle = self.evaluate_oracle(query, labels)
+                step_oracle = self.evaluate_oracle(query, labels, labels=np.unique(pool.target))
 
                 # record results
                 results = self.update_run_results(results, step_results, step_oracle, current_cost)
