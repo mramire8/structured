@@ -283,4 +283,4 @@ class Experiment(object):
         for i in range(len(query.index)):
             print "{}\t{}\t{}\t{}\t{}\t{}\t{}".format(query.index[i], query.target[i], st_prob[i][0], st_prob[i][1],
                                                       ex_prob[i][0], ex_prob[i][1], query.snippet[i].encode('utf-8'))
-        print
+        # print
