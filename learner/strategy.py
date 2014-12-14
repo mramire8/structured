@@ -132,6 +132,7 @@ class StructuredLearner(ActiveLearner):
         q.bow = self.vct.transform(snippets)
         q.text = pool.data[indices]
         q.target = pool.target[indices]
+        q.snippet = snippets
         q.index = indices
         return q
 
