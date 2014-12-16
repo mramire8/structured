@@ -13,6 +13,7 @@ class RandomSampling(Learner):
 class BootstrapFromEach(Learner):
     def __init__(self, model, seed=None):
         super(BootstrapFromEach, self).__init__(model, seed=seed)
+        self.rnd_state = np.random.RandomState(self.seed)
 
     def bootstrap(self, pool, step=2, shuffle=False):
         """
@@ -37,7 +38,7 @@ class BootstrapFromEach(Learner):
         for label in data.keys():
             candidates = data[label]
             if shuffle:
-                indices = self.randgen.permutation(len(candidates))
+                indices = self.rnd_state.permutation(len(candidates))
             else:
                 indices = range(len(candidates))
             chosen.extend([candidates[index] for index in indices[:step]])
