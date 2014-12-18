@@ -54,7 +54,7 @@ def load_imdb(path, subset="all", shuffle=True, rnd=2356):
         # Use an object array to shuffle: avoids memory copy
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]
-        data.train.data = data_lst.tolist()
+        data.train.data = data_lst
 
     data = minimum_size(data)
 
@@ -93,7 +93,7 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356):
         # Use an object array to shuffle: avoids memory copy
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]
-        data.train.data = data_lst.tolist()
+        data.train.data = data_lst
 
     data = minimum_size(data)
     return data
@@ -143,7 +143,7 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
         # Use an object array to shuffle: avoids memory copy
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]
-        data.train.data = data_lst.tolist()
+        data.train.data = data_lst
 
     return data
 
