@@ -75,7 +75,7 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
     learner.set_utility(learn_config['utility'])
     learner.set_snippet_utility(learn_config['snippet'])
     learner.set_sent_tokenizer(sent_tk)
-    learner.set_calibration(learn_config['calibrate'])
+    learner.set_calibration_method(learn_config['calibration'])
     learner.set_vct(vct)
 
     return learner

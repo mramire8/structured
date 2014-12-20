@@ -137,19 +137,25 @@ class StructuredLearner(ActiveLearner):
         q.index = indices
         return q
 
-    def _do_calibration(self, scores, y_pred):
-        if self.calibrate:
-            from sklearn import preprocessing
-            # prediction +1 to preserve the spcarcity of the matrix
-            c0_scores = scores[y_pred == (0+1)]
-            c1_scores = scores[y_pred == (1+1)]
-            c0_scores = preprocessing.scale(c0_scores)
-            c1_scores = preprocessing.scale(c1_scores)
-            scores[y_pred == (0+1)] = c0_scores
-            scores[y_pred == (1+1)] = c1_scores
-            return scores
-        else:
-            return scores
+    def _do_calibration(self, socres, y_pred):
+        raise NotImplementedError("This method should be assigned from configuration")
+
+    def zscores(self, scores, y_pred):
+        # if self.calibrate:
+        from sklearn import preprocessing
+        # prediction +1 to preserve the spcarcity of the matrix
+        c0_scores = scores[y_pred == (0+1)]
+        c1_scores = scores[y_pred == (1+1)]
+        c0_scores = preprocessing.scale(c0_scores)
+        c1_scores = preprocessing.scale(c1_scores)
+        scores[y_pred == (0+1)] = c0_scores
+        scores[y_pred == (1+1)] = c1_scores
+        return scores
+        # else:
+        #     return scores
+
+    def _no_calibrate(self, scores, y_pred):
+        return scores
 
     def set_utility(self, util):
         if util == 'rnd':
@@ -164,6 +170,10 @@ class StructuredLearner(ActiveLearner):
             self.snippet_utility = self._snippet_max
         elif util == 'first1' or util == 'true':
             self.snippet_utility = self._snippet_first
+
+    def set_calibration_method(self, cal_name):
+        self._do_calibration = getattr(self, cal_name)
+
 
     def set_sent_tokenizer(self, tokenizer):
         self.sent_tokenizer = tokenizer
