@@ -125,7 +125,7 @@ class Experiment(object):
     def get_name(self):
         cfg = cfgutil.get_section_options(self.config, 'learner')
 
-        name = "data-{}-lrn-{}-ut-{}-snip-{}-cal-{}".format(self.dataname,cfg['type'], cfg['utility'],cfg['snippet'],cfg['calibrate'])
+        name = "data-{}-lrn-{}-ut-{}-snip-{}-cal-{}".format(self.dataname,cfg['type'], cfg['utility'],cfg['snippet'],cfg['calibration'])
         return name
 
     def bootstrap(self, pool, bt, train):
