@@ -147,7 +147,7 @@ class StructuredLearner(ActiveLearner):
         """
         raise NotImplementedError("This method should be assigned from configuration")
 
-    def zscores(self, scores, y_pred):
+    def zscores_pred(self, scores, y_pred):
         # if self.calibrate:
         from sklearn import preprocessing
         # prediction +1 to preserve the spcarcity of the matrix
@@ -160,6 +160,24 @@ class StructuredLearner(ActiveLearner):
         return scores
         # else:
         #     return scores
+    
+    def zscores_rank(self, scores, y_pred):
+        
+        from sklearn import preprocessing
+        # prediction +1 to preserve the spcarcity of the matrix
+        _scores = np.array(scores)
+        _scores[y_pred == 1] = scores[y_pred == 1]
+        _scores[y_pred == 2] = 1. - scores[y_pred == 2]
+        
+        median_score = np.median(_scores[y_pred>0])
+        
+        rank1_indices = np.bitwise_and(_scores > median_score, y_pred > 0)
+        rank2_indices = np.bitwise_and(_scores <= median_score, y_pred > 0)
+        
+        _scores[rank1_indices] = preprocessing.scale(_scores[rank1_indices])
+        _scores[rank2_indices] = preprocessing.scale(1. - _scores[rank2_indices])
+        
+        return _scores
 
     def _no_calibrate(self, scores, y_pred):
         return scores
