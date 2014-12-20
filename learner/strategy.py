@@ -137,7 +137,14 @@ class StructuredLearner(ActiveLearner):
         q.index = indices
         return q
 
-    def _do_calibration(self, socres, y_pred):
+    def _do_calibration(self, scores, y_pred):
+        """
+        perform calibration on the scores per sentence
+        :param socres: scores per document sentences as computed by  _Snippet_fn
+        :param y_pred: prediction of the sentences as predicted by $P_S$. This predictions are shift by adding +1
+            thus class 0 appears as 1, class 1 as 2, and so on.
+        :raise NotImplementedError:
+        """
         raise NotImplementedError("This method should be assigned from configuration")
 
     def zscores(self, scores, y_pred):
