@@ -95,6 +95,9 @@ def get_expert(config):
     elif config['type'] == 'sent':
         tk = get_tokenizer(config['sent_tokenizer'])
         expert = SentenceExpert(clf, tokenizer=tk)
+    elif config['type'] == 'noisy':
+        p = config['noise_p']
+        expert = SentenceExpert(None, p)
     else:
         raise Exception("We dont know {} expert".format(config['type']))
 

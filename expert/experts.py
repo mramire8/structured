@@ -17,6 +17,33 @@ class TrueExpert(BaseExpert):
         return self
 
 
+class NoisyExpert(BaseExpert):
+
+    def __init__(self, oracle, noise_p, seed=8273645):
+        import numpy as np
+        super(NoisyExpert, self).__init__(oracle)
+        self.noise_p = noise_p
+        self.rnd = np.random.RandomState(seed)
+
+    def label(self, data, y=None):
+
+        if len(y) == 1:
+            coin = self.rnd.random_sample()
+
+            if coin < self.noise_p:
+                return 1 - y
+            else:
+                return y
+        else:
+            coin = self.rnd.random_sample(y.shape)
+            new_target = y.copy()
+            new_target[coin < self.noise_p] = 1 - new_target[coin < self.noise_p]
+            return new_target
+
+    def fit(self, X, y=None, vct=None):
+        return self
+
+
 class PredictingExpert(BaseExpert):
     """docstring for PredictingExpert"""
 
@@ -63,4 +90,3 @@ class SentenceExpert(PredictingExpert):
         sx = vct.transform(sx)
         self.oracle.fit(sx, sy)
         return self
-        
