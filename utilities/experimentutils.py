@@ -83,7 +83,7 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
 
 def get_expert(config):
     from expert.base import BaseExpert
-    from expert.experts import PredictingExpert, SentenceExpert, TrueExpert
+    from expert.experts import PredictingExpert, SentenceExpert, TrueExpert, NoisyExpert
     cl_name = config['model']
     clf = get_classifier(cl_name, parameter=config['parameter'])
     
@@ -97,7 +97,7 @@ def get_expert(config):
         expert = SentenceExpert(clf, tokenizer=tk)
     elif config['type'] == 'noisy':
         p = config['noise_p']
-        expert = SentenceExpert(None, p)
+        expert = NoisyExpert(None, p)
     else:
         raise Exception("We dont know {} expert".format(config['type']))
 
