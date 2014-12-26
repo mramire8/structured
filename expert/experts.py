@@ -1,5 +1,5 @@
 from base import BaseExpert
-
+import numpy as np
 
 class TrueExpert(BaseExpert):
     """docstring for TrueExpert"""
@@ -20,7 +20,7 @@ class TrueExpert(BaseExpert):
 class NoisyExpert(BaseExpert):
 
     def __init__(self, oracle, noise_p, seed=8273645):
-        import numpy as np
+
         super(NoisyExpert, self).__init__(oracle)
         self.noise_p = noise_p
         self.rnd = np.random.RandomState(seed)
@@ -90,3 +90,24 @@ class SentenceExpert(PredictingExpert):
         sx = vct.transform(sx)
         self.oracle.fit(sx, sy)
         return self
+
+
+class ReluctantSentenceExpert(SentenceExpert):
+
+    def __init__(self, oracle, reluctant_threshold, tokenizer=None, seed=43212):
+        super(ReluctantSentenceExpert, self).__init__(oracle, tokenizer=tokenizer)
+        self.reluctant_threhold = reluctant_threshold
+        self.rnd = np.random.RandomState(seed)
+
+    def label(self, data, y=None):
+        prediction = np.array([None] * data.shape[0], dtype=object)
+        proba = self.oracle.predict_proba(data)
+        pred = self.oracle.predict(data)
+        unc = proba.min(axis=1)
+        if y is not None:
+            ## true labels do not exists return prediction label
+            prediction[unc > self.reluctant_threhold] = pred[unc > self.reluctant_threhold]
+        else:
+            # if true labels exist return labels
+            prediction[unc > self.reluctant_threhold] = y[unc > self.reluctant_threhold]
+        return prediction

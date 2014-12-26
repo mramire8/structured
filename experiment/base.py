@@ -83,7 +83,7 @@ class Experiment(object):
         self.bootstrap_size = config['bootstrap']
         self.costfn = exputil.get_costfn(config['costfunction'])
 
-        #data related config
+        # data related config
         config = cfgutil.get_section_options(config_obj, 'data')
         self.split = config['split']
         self.data_cat = config['categories']
@@ -98,7 +98,8 @@ class Experiment(object):
         print self.get_name()
         trial = []
         self._setup_options(self.config)
-        self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed, shuffle=True)
+        self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
+                                          shuffle=True)
         self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
         t = 0
@@ -108,7 +109,7 @@ class Experiment(object):
 
             ## get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
-                                          vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t*10+10))
+                                          vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t * 10 + 10))
 
             expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'))
 
@@ -134,7 +135,7 @@ class Experiment(object):
         bt_obj = BootstrapFromEach(None, seed=self.seed)
         initial = bt_obj.bootstrap(pool, step=bt, shuffle=False)
 
-       # update initial training data
+        # update initial training data
         train.index = initial
         train.target = pool.target[initial].tolist()
         return train
@@ -146,7 +147,7 @@ class Experiment(object):
         prediction = learner.predict(test.bow)
         pred_proba = learner.predict_proba(test.bow)
         accu = metrics.accuracy_score(test.target, prediction)
-        auc = metrics.roc_auc_score(test.target, pred_proba[:,1])
+        auc = metrics.roc_auc_score(test.target, pred_proba[:, 1])
         return {'auc': auc, 'accuracy': accu}
 
     def evaluate_oracle(self, query, predictions, labels=None):
@@ -158,18 +159,19 @@ class Experiment(object):
         results['auc'][iteration].append(step['auc'])
         results['ora_accu'][iteration].append(oracle)
         if self.verbose:
-            if iteration==self.step:
+            if iteration == self.step:
                 print "IT\tACCU\tAUC\tT0\tF1\tF0\tT1"
-            print "{0}\t{1:.3f}\t{2:.3f}\t".format(iteration, step['accuracy'],step['auc']),
-            print "\t".join(["{0:.3f}".format(x) for x in np.reshape(oracle,4)])
+            print "{0}\t{1:.3f}\t{2:.3f}\t".format(iteration, step['accuracy'], step['auc']),
+            print "\t".join(["{0:.3f}".format(x) for x in np.reshape(oracle, 4)])
         return results
 
     def update_pool(self, pool, query, labels, train):
         ## remove from remaining
         for q, t in zip(query.index, labels):
             pool.remaining.remove(q)
-            train.index.append(q)
-            train.target.append(t)
+            if t is not None:  # if the answer is not neutral
+                train.index.append(q)
+                train.target.append(t)
 
         return pool, train
 
@@ -182,7 +184,7 @@ class Experiment(object):
         return learner.fit(X, y, doc_text=text)
 
     def main_loop(self, learner, expert, budget, bootstrap, pool, test):
-        from  collections import deque
+        from collections import deque
 
         iteration = 0
         current_cost = 0
@@ -242,7 +244,7 @@ class Experiment(object):
 
     def _get_cm_iteration(self, iteration):
         cost = sorted(iteration.keys())
-        perf = [np.mean(iteration[xi],axis=0).reshape(4) for xi in cost]
+        perf = [np.mean(iteration[xi], axis=0).reshape(4) for xi in cost]
         std = [np.std(iteration[xi]) for xi in cost]
         n = [np.size(iteration[xi]) for xi in cost]
 
@@ -269,13 +271,13 @@ class Experiment(object):
         p = np.mean(accu, axis=0)
         c = np.mean(cost, axis=0)
         s = np.std(accu, axis=0)
-        exputil.print_file(c,p,s,open(output_name+"-accu.txt", "w"))
+        exputil.print_file(c, p, s, open(output_name + "-accu.txt", "w"))
         p = np.mean(auc, axis=0)
         s = np.std(auc, axis=0)
-        exputil.print_file(c,p,s,open(output_name+"-auc.txt", "w"))
+        exputil.print_file(c, p, s, open(output_name + "-auc.txt", "w"))
         p = np.mean(ora, axis=0)
         s = np.std(ora, axis=0)
-        exputil.print_cm_file(c,p,s,open(output_name+"-oracle-cm.txt", "w"))
+        exputil.print_cm_file(c, p, s, open(output_name + "-oracle-cm.txt", "w"))
 
     def _debug(self, learner, expert, query):
         st_prob = learner.snippet_model.predict_proba(query.bow)
@@ -284,4 +286,4 @@ class Experiment(object):
         for i in range(len(query.index)):
             print "{}\t{}\t{}\t{}\t{}\t{}\t{}".format(query.index[i], query.target[i], st_prob[i][0], st_prob[i][1],
                                                       ex_prob[i][0], ex_prob[i][1], query.snippet[i].encode('utf-8'))
-        # print
+            # print
