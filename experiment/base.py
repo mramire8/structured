@@ -151,7 +151,10 @@ class Experiment(object):
         return {'auc': auc, 'accuracy': accu}
 
     def evaluate_oracle(self, query, predictions, labels=None):
-        cm = metrics.confusion_matrix(query.target, predictions, labels=labels)
+        t = np.array([[x,y] for x,y in zip(query.target, predictions) if y is not None])
+        cm = np.zeros((2,2))
+        if len(t)> 0:
+            cm = metrics.confusion_matrix(t[:,0], t[:,1], labels=labels)
         return cm
 
     def update_run_results(self, results, step, oracle, iteration):

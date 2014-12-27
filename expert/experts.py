@@ -104,10 +104,11 @@ class ReluctantSentenceExpert(SentenceExpert):
         proba = self.oracle.predict_proba(data)
         pred = self.oracle.predict(data)
         unc = proba.min(axis=1)
-        if y is not None:
-            ## true labels do not exists return prediction label
-            prediction[unc > self.reluctant_threhold] = pred[unc > self.reluctant_threhold]
-        else:
-            # if true labels exist return labels
-            prediction[unc > self.reluctant_threhold] = y[unc > self.reluctant_threhold]
+        prediction[unc > self.reluctant_threhold] = pred[unc > self.reluctant_threhold]
+        # if y is not None:
+        #     ## true labels do not exists return prediction label
+        #     prediction[unc > self.reluctant_threhold] = pred[unc > self.reluctant_threhold]
+        # else:
+        #     # if true labels exist return labels
+        #     prediction[unc > self.reluctant_threhold] = y[unc > self.reluctant_threhold]
         return prediction
