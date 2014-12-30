@@ -155,7 +155,7 @@ def load_dataset(name, path, categories=None, rnd=2356, shuffle=True):
         ########## IMDB MOVIE REVIEWS ###########
         # data = bunch.Bunch(load_imdb(name, shuffle=True, rnd=2356, vct=vct, min_size=min_size, fix_k=fixk, raw=raw))  # should brind data as is
         data = load_imdb(path, shuffle=shuffle, rnd=rnd)  # should brind data as is
-    elif "aviation" in name:
+    elif "sraa" in name:
         ########## sraa dataset ######
         data = load_aviation(path, shuffle=shuffle, rnd=rnd)
     elif "20news" in name:
