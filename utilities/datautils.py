@@ -61,7 +61,7 @@ def load_imdb(path, subset="all", shuffle=True, rnd=2356):
     return data
 
 
-def load_aviation(path, subset="all", shuffle=True, rnd=2356):
+def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None):
     """
     load text files from Aviation-auto dataset from folders to memory. It will return a 25-75 percent train test split
     :param path: path of the root directory of the data
@@ -71,31 +71,42 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356):
     :param vct: vectorizer
     :return: :raise ValueError:
     """
-    # from sklearn.cross_validation import  ShuffleSplit
-    data = bunch.Bunch()
+    from sklearn.cross_validation import ShuffleSplit
 
+    data = bunch.Bunch()
     if subset in ('train', 'test'):
         raise Exception("We are not ready for train test aviation data yet")
     elif subset == "all":
         data = load_files(path, encoding="latin1", load_content=True,
                                    random_state=rnd)
-        data.data = [keep_header_subject(text) for text in data.data]
+        data.data = np.array([keep_header_subject(text) for text in data.data], dtype=object)
     else:
         raise ValueError(
             "subset can only be 'train', 'test' or 'all', got '%s'" % subset)
 
+    indices = ShuffleSplit(len(data.data), n_iter=1, test_size=percent, random_state=rnd)
+    for train_ind, test_ind in indices:
+        data = bunch.Bunch(train=bunch.Bunch(data=data.data[train_ind], target=data.target[train_ind],
+                                             filenames=data.filenames[train_ind], target_names=data.target_names),
+                           test=bunch.Bunch(data=data.data[test_ind], target=data.target[test_ind],
+                                            filenames=data.filenames[test_ind], target_names=data.target_names))
+        # data = bunch.Bunch(train=bunch.Bunch(data=[data.data[i] for i in train_ind], target=data.target[train_ind],
+        #                                      target_names=data.target_names),
+        #                    test=bunch.Bunch(data=[data.data[i] for i in test_ind], target=data.target[test_ind],
+        #                                     target_names=data.target_names))
+
     if shuffle:
         random_state = np.random.RandomState(rnd)
-        indices = np.arange(data.target.shape[0])
+        indices = np.arange(data.train.target.shape[0])
         random_state.shuffle(indices)
-        data.filenames = data.filenames[indices]
-        data.target = data.target[indices]
+        data.train.filenames = data.train.filenames[indices]
+        data.train.target = data.train.target[indices]
         # Use an object array to shuffle: avoids memory copy
-        data_lst = np.array(data.data, dtype=object)
+        data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]
-        data.data = data_lst
+        data.train.data = data_lst
 
-    data = minimum_size_sraa(data)
+    data = minimum_size(data)
     return data
 
 
@@ -104,9 +115,10 @@ def minimum_size(data):
     for part in data.keys():
         if len(data[part].data) != len(data[part].target):
             raise Exception("There is something wrong with the data")
-        filtered = [(x, y) for x, y in zip(data[part].data, data[part].target) if len(x.strip()) >= 10]
-        data[part].data = np.array([x for x, _ in filtered])
-        data[part].target = np.array([y for _, y in filtered])
+        # filtered = [(x, y) for x, y in zip(data[part].data, data[part].target) if len(x.strip()) >= 10]
+        filtered = np.array([len(x.strip()) for x in data[part].data])
+        data[part].data = data[part].data[filtered >= 10]
+        data[part].target = data[part].target[filtered >= 10]
     return data
 
 
@@ -114,9 +126,9 @@ def minimum_size_sraa(data):
 
     if len(data.data) != len(data.target):
         raise Exception("There is something wrong with the data")
-    filtered = [(x, y) for x, y in zip(data.data, data.target) if len(x.strip()) >= 10]
-    data.data = np.array([x for x, _ in filtered])
-    data.target = np.array([y for _, y in filtered])
+    filtered = np.array([len(x.strip()) for x in data.data])
+    data.data = data.data[filtered >= 10]
+    data.target = data.target[filtered >= 10]
     return data
 
 
@@ -158,7 +170,7 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
     return data
 
 
-def load_dataset(name, path, categories=None, rnd=2356, shuffle=True):
+def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5):
     data = bunch.Bunch()
 
     if "imdb" in name:
@@ -167,7 +179,7 @@ def load_dataset(name, path, categories=None, rnd=2356, shuffle=True):
         data = load_imdb(path, shuffle=shuffle, rnd=rnd)  # should brind data as is
     elif "sraa" in name:
         ########## sraa dataset ######
-        data = load_aviation(path, shuffle=shuffle, rnd=rnd)
+        data = load_aviation(path, shuffle=shuffle, rnd=rnd, percent=percent)
     elif "20news" in name:
         ########## 20 news groups ######
         data = load_20newsgroups(category=categories, shuffle=shuffle, rnd=rnd)

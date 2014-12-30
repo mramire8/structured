@@ -2,6 +2,7 @@ from sklearn.datasets import base as bunch
 from learner.strategy import Joint, Sequential
 import numpy as np
 
+
 def sample_data(data, train_idx, test_idx):
     sample = bunch.Bunch(train=bunch.Bunch(), test=bunch.Bunch())
     
@@ -24,6 +25,7 @@ def sample_data(data, train_idx, test_idx):
         sample.train.bow = data.train.bow[train_idx]
         sample.train.remaining = []
     return sample.train, sample.test
+
 
 def get_vectorizer(config):
     limit = config['limit']

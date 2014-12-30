@@ -99,15 +99,15 @@ class Experiment(object):
         trial = []
         self._setup_options(self.config)
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
-                                          shuffle=True)
+                                          shuffle=True, percent=self.split)
         self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
         t = 0
         for train_index, test_index in cv:
-            ## get the data of this cv iteration
+            # get the data of this cv iteration
             train, test = exputil.sample_data(self.data, train_index, test_index)
 
-            ## get the expert and student
+            # get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
                                           vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t * 10 + 10))
 
@@ -115,10 +115,10 @@ class Experiment(object):
 
             expert.fit(train.data, y=train.target, vct=self.vct)
 
-            ## do active learning
+            # do active learning
             results = self.main_loop(learner, expert, self.budget, self.bootstrap_size, train, test)
 
-            ## save the results
+            # save the results
             trial.append(results)
             t += 1
         self.report_results(trial)
