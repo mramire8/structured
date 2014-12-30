@@ -86,16 +86,16 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356):
 
     if shuffle:
         random_state = np.random.RandomState(rnd)
-        indices = np.arange(data.train.target.shape[0])
+        indices = np.arange(data.target.shape[0])
         random_state.shuffle(indices)
-        data.train.filenames = data.train.filenames[indices]
-        data.train.target = data.train.target[indices]
+        data.filenames = data.filenames[indices]
+        data.target = data.target[indices]
         # Use an object array to shuffle: avoids memory copy
-        data_lst = np.array(data.train.data, dtype=object)
+        data_lst = np.array(data.data, dtype=object)
         data_lst = data_lst[indices]
-        data.train.data = data_lst
+        data.data = data_lst
 
-    data = minimum_size(data)
+    data = minimum_size_sraa(data)
     return data
 
 
@@ -105,8 +105,18 @@ def minimum_size(data):
         if len(data[part].data) != len(data[part].target):
             raise Exception("There is something wrong with the data")
         filtered = [(x, y) for x, y in zip(data[part].data, data[part].target) if len(x.strip()) >= 10]
-        data[part].data = [x for x, _ in filtered]
+        data[part].data = np.array([x for x, _ in filtered])
         data[part].target = np.array([y for _, y in filtered])
+    return data
+
+
+def minimum_size_sraa(data):
+
+    if len(data.data) != len(data.target):
+        raise Exception("There is something wrong with the data")
+    filtered = [(x, y) for x, y in zip(data.data, data.target) if len(x.strip()) >= 10]
+    data.data = np.array([x for x, _ in filtered])
+    data.target = np.array([y for _, y in filtered])
     return data
 
 
