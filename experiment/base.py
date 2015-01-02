@@ -51,8 +51,44 @@ class Experiment(object):
         data.test.bow = self.vct.transform(data.test.data)
         return data
 
+    def _sample_data(self, data, train_idx, test_idx):
+        sample = bunch.Bunch(train=bunch.Bunch(), test=bunch.Bunch())
+
+        if len(test_idx) > 0: #if there are test indexes
+            sample.train.data = np.array(data.data, dtype=object)[train_idx]
+            sample.test.data = np.array(data.data, dtype=object)[test_idx]
+
+            sample.train.target = data.target[train_idx]
+            sample.test.target = data.target[test_idx]
+
+            sample.train.bow = self.vct.fit_transform(sample.train.data)
+            sample.test.bow = self.vct.transform(sample.test.data)
+
+            sample.target_names = data.target_names
+            sample.train.remaining = []
+        else:
+            ## Just shuffle the data and vectorize
+            sample = data
+            data_lst = np.array(data.train.data, dtype=object)
+            data_lst = data_lst[train_idx]
+            sample.train.data = data_lst
+
+            sample.train.target = data.train.target[train_idx]
+
+            sample.train.bow = self.vct.fit_transform(data.train.data)
+            sample.test.bow = self.vct.transform(data.test.data)
+
+            sample.train.remaining = []
+
+        return sample.train, sample.test
+
     def cross_validation_data(self, data, **config):
-        n = data.train.target.shape[0]
+
+        if 'train' in data.keys():
+            n = data.train.target.shape[0]
+        else:
+            n = data.target.shape[0]
+
         cv = None
 
         if config['folds'] == 1 and 'test' not in data.keys():
@@ -100,12 +136,13 @@ class Experiment(object):
         self._setup_options(self.config)
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
                                           shuffle=True, percent=self.split)
-        self.data = self.vectorize(self.data)
+        # self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
         t = 0
         for train_index, test_index in cv:
             # get the data of this cv iteration
-            train, test = exputil.sample_data(self.data, train_index, test_index)
+            # train, test = exputil.sample_data(self.data, train_index, test_index)
+            train, test = self._sample_data(self.data, train_index, test_index)
 
             # get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),

@@ -6,8 +6,8 @@ ap = argparse.ArgumentParser(description=__doc__,
                              formatter_class=argparse.RawTextHelpFormatter)
 ap.add_argument('--train',
                 metavar='TRAIN',
-                default="sraa",
-                choices=['imdb', 'sraa', '20news'],
+                default="twitter",
+                choices=['imdb', 'sraa', '20news', 'twitter'],
                 help='training data (libSVM format)')
 
 ap.add_argument('--verbose',

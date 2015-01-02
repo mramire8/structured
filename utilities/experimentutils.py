@@ -116,6 +116,10 @@ def get_tokenizer(tk_name):
         import nltk
         sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
         return sent_detector
+    elif tk_name == 'twits':
+        from twit_token import TwitterSentenceTokenizer
+        sent_detector = TwitterSentenceTokenizer()
+        return sent_detector
     else:
         raise Exception("Unknown sentence tokenizer")
 
