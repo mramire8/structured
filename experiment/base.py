@@ -239,7 +239,7 @@ class Experiment(object):
         ## keep track of current training
         train = bunch.Bunch(index=[], target=[])
 
-        while current_cost <= budget and iteration <= self.max_iteration and pool.remaining > self.step:
+        while current_cost <= budget and iteration <= self.max_iteration and len(pool.remaining) > self.step:
             if iteration == 0:
                 # bootstrap
                 train = self.bootstrap(pool, bootstrap, train)
