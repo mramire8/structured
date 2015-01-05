@@ -55,6 +55,7 @@ def load_imdb(path, subset="all", shuffle=True, rnd=2356):
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]
         data.train.data = data_lst
+        data.test.data = np.array(data.test.data, dtype=object)
 
     data = minimum_size(data)
 
@@ -101,6 +102,7 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None):
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]
         data.train.data = data_lst
+        data.test.data = np.array(data.test.data, dtype=object)
 
     data = minimum_size(data)
     return data
