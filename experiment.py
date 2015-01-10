@@ -22,7 +22,7 @@ ap.add_argument('--debug',
 ap.add_argument('--config',
                 metavar='CONFIG_FILE',
                 type=str,
-                default='./twitter_neu_rnd_first1.cfg',
+                default='./default.cfg',
                 help='Experiment configuration file')
 
 
