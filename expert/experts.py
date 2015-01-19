@@ -112,3 +112,25 @@ class ReluctantSentenceExpert(SentenceExpert):
         #     # if true labels exist return labels
         #     prediction[unc > self.reluctant_threhold] = y[unc > self.reluctant_threhold]
         return prediction
+
+
+class ReluctantDocumentExpert(SentenceExpert):
+
+    def __init__(self, oracle, reluctant_threshold, tokenizer=None, seed=43212):
+        super(ReluctantDocumentExpert, self).__init__(oracle, tokenizer=tokenizer)
+        self.reluctant_threhold = reluctant_threshold
+        self.rnd = np.random.RandomState(seed)
+
+    def fit(self, X_text, y=None, vct=None):
+        sx = vct.transform(X_text)
+        self.oracle.fit(sx, y)
+        return self
+
+    def label(self, data, y=None):
+        prediction = np.array([None] * data.shape[0], dtype=object)
+        proba = self.oracle.predict_proba(data)
+        pred = self.oracle.predict(data)
+        unc = proba.min(axis=1)
+        prediction[unc < self.reluctant_threhold] = pred[unc < self.reluctant_threhold]
+
+        return prediction

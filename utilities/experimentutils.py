@@ -30,11 +30,17 @@ def sample_data(data, train_idx, test_idx):
 def get_vectorizer(config):
     limit = config['limit']
     vectorizer = config['vectorizer']
+
     min_size = config['min_size']
 
+    from sklearn.feature_extraction.text import  TfidfVectorizer
     if vectorizer == 'tfidf':
-        from sklearn.feature_extraction.text import  TfidfVectorizer
         return TfidfVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=False, ngram_range=(1, 1))
+    elif vectorizer == "tfidfvocab":
+        vocab = open(config['vocabulary']).readlines()
+        vocab = [v.strip() for v in vocab]
+        return TfidfVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=False, ngram_range=(1, 1),
+                               vocabulary=vocab)
     else:
         return None
 
@@ -48,7 +54,7 @@ def get_classifier(cl_name, **kwargs):
         if 'parameter' in kwargs:
             alpha = kwargs['parameter']
         clf = MultinomialNB(alpha=alpha)
-    elif cl_name == "lr":
+    elif cl_name == "lr" or cl_name == "lrl1":
         c = 1
         if 'parameter' in kwargs:
             c = kwargs['parameter']
@@ -86,7 +92,7 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
 def get_expert(config):
     from expert.base import BaseExpert
     from expert.experts import PredictingExpert, SentenceExpert, \
-        TrueExpert, NoisyExpert, ReluctantSentenceExpert
+        TrueExpert, NoisyExpert, ReluctantSentenceExpert, ReluctantDocumentExpert
     cl_name = config['model']
     clf = get_classifier(cl_name, parameter=config['parameter'])
     
@@ -105,6 +111,10 @@ def get_expert(config):
         p = config['threshold']
         tk = get_tokenizer(config['sent_tokenizer'])
         expert = ReluctantSentenceExpert(clf, p, tokenizer=tk)
+    elif config['type'] == 'docneutral':
+        p = config['threshold']
+        tk = get_tokenizer(config['sent_tokenizer'])
+        expert = ReluctantDocumentExpert(clf, p, tokenizer=tk)
     else:
         raise Exception("We dont know {} expert".format(config['type']))
 
