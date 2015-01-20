@@ -30,10 +30,10 @@ def sample_data(data, train_idx, test_idx):
 def get_vectorizer(config):
     limit = config['limit']
     vectorizer = config['vectorizer']
-
     min_size = config['min_size']
 
-    from sklearn.feature_extraction.text import  TfidfVectorizer
+    from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+
     if vectorizer == 'tfidf':
         return TfidfVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=False, ngram_range=(1, 1))
     elif vectorizer == "tfidfvocab":
@@ -41,6 +41,11 @@ def get_vectorizer(config):
         vocab = [v.strip() for v in vocab]
         return TfidfVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=False, ngram_range=(1, 1),
                                vocabulary=vocab)
+    elif vectorizer == 'bow':
+        from datautils import StemTokenizer
+        return CountVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=True, ngram_range=(1, 3),
+                      token_pattern='\\b\\w+\\b', tokenizer=StemTokenizer())
+
     else:
         return None
 

@@ -1,8 +1,19 @@
-import os
 from sklearn.datasets import load_files
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.datasets import base as bunch
 import numpy as np
+
+
+class StemTokenizer(object):
+    def __init__(self):
+        from nltk import RegexpTokenizer
+        from nltk.stem import PorterStemmer
+        self.wnl = PorterStemmer()
+        self.mytokenizer = RegexpTokenizer('\\b\\w+\\b')
+
+    def __call__(self, doc):
+
+        return [self.wnl.stem(t) for t in self.mytokenizer.tokenize(doc)]
 
 
 def keep_header_subject(text, keep_subject=False):
@@ -57,7 +68,7 @@ def load_imdb(path, subset="all", shuffle=True, rnd=2356):
         data.train.data = data_lst
         data.test.data = np.array(data.test.data, dtype=object)
 
-    data = minimum_size(data)
+    data = minimum_size(data, min_size=100)
 
     return data
 
@@ -108,25 +119,25 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None):
     return data
 
 
-def minimum_size(data):
+def minimum_size(data, min_size=10):
 
     for part in data.keys():
         if len(data[part].data) != len(data[part].target):
             raise Exception("There is something wrong with the data")
         # filtered = [(x, y) for x, y in zip(data[part].data, data[part].target) if len(x.strip()) >= 10]
         filtered = np.array([len(x.strip()) for x in data[part].data])
-        data[part].data = data[part].data[filtered >= 10]
-        data[part].target = data[part].target[filtered >= 10]
+        data[part].data = data[part].data[filtered >= min_size]
+        data[part].target = data[part].target[filtered >= min_size]
     return data
 
 
-def minimum_size_sraa(data):
+def minimum_size_sraa(data, min_size=10):
 
     if len(data.data) != len(data.target):
         raise Exception("There is something wrong with the data")
     filtered = np.array([len(x.strip()) for x in data.data])
     data.data = data.data[filtered >= 10]
-    data.target = data.target[filtered >= 10]
+    data.target = data.target[filtered >= min_size]
     return data
 
 
