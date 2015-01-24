@@ -95,13 +95,13 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
 
 
 def get_expert(config):
-    from expert.base import BaseExpert
+
     from expert.experts import PredictingExpert, SentenceExpert, \
-        TrueExpert, NoisyExpert, ReluctantSentenceExpert, ReluctantDocumentExpert
+        TrueExpert, NoisyExpert, ReluctantSentenceExpert, ReluctantDocumentExpert, \
+        PerfectReluctantDocumentExpert
     cl_name = config['model']
     clf = get_classifier(cl_name, parameter=config['parameter'])
-    
-    expert = BaseExpert(clf)
+
     if config['type'] == 'true':
         expert = TrueExpert(None)
     elif config['type'] == 'pred':
@@ -116,12 +116,14 @@ def get_expert(config):
         p = config['threshold']
         tk = get_tokenizer(config['sent_tokenizer'])
         expert = ReluctantSentenceExpert(clf, p, tokenizer=tk)
-    elif config['type'] == 'docneutral':
+    elif config['type'] == 'docneutral' or config['type'] == 'noisyreluctant' :
         p = config['threshold']
-        tk = get_tokenizer(config['sent_tokenizer'])
-        expert = ReluctantDocumentExpert(clf, p, tokenizer=tk)
+        expert = ReluctantDocumentExpert(clf, p)
+    elif config['type'] == 'perfectreluctant':
+        p = config['threshold']
+        expert = PerfectReluctantDocumentExpert(clf, p)
     else:
-        raise Exception("We dont know {} expert".format(config['type']))
+        raise Exception("We don't know {} expert".format(config['type']))
 
     return expert
 

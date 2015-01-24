@@ -105,19 +105,14 @@ class ReluctantSentenceExpert(SentenceExpert):
         pred = self.oracle.predict(data)
         unc = proba.min(axis=1)
         prediction[unc < self.reluctant_threhold] = pred[unc < self.reluctant_threhold]
-        # if y is not None:
-        #     ## true labels do not exists return prediction label
-        #     prediction[unc > self.reluctant_threhold] = pred[unc > self.reluctant_threhold]
-        # else:
-        #     # if true labels exist return labels
-        #     prediction[unc > self.reluctant_threhold] = y[unc > self.reluctant_threhold]
+
         return prediction
 
 
-class ReluctantDocumentExpert(SentenceExpert):
+class ReluctantDocumentExpert(PredictingExpert):
 
-    def __init__(self, oracle, reluctant_threshold, tokenizer=None, seed=43212):
-        super(ReluctantDocumentExpert, self).__init__(oracle, tokenizer=tokenizer)
+    def __init__(self, oracle, reluctant_threshold, seed=43212):
+        super(ReluctantDocumentExpert, self).__init__(oracle)
         self.reluctant_threhold = reluctant_threshold
         self.rnd = np.random.RandomState(seed)
 
@@ -132,5 +127,26 @@ class ReluctantDocumentExpert(SentenceExpert):
         pred = self.oracle.predict(data)
         unc = proba.min(axis=1)
         prediction[unc < self.reluctant_threhold] = pred[unc < self.reluctant_threhold]
+
+        return prediction
+
+
+class PerfectReluctantDocumentExpert(PredictingExpert):
+
+    def __init__(self, oracle, reluctant_threshold, tokenizer=None, seed=43212):
+        super(PerfectReluctantDocumentExpert, self).__init__(oracle)
+        self.reluctant_threhold = reluctant_threshold
+        self.rnd = np.random.RandomState(seed)
+
+    def fit(self, X_text, y=None, vct=None):
+        sx = vct.transform(X_text)
+        self.oracle.fit(sx, y)
+        return self
+
+    def label(self, data, y=None):
+        prediction = np.array([None] * data.shape[0], dtype=object)
+        proba = self.oracle.predict_proba(data)
+        unc = 1. - proba.max(axis=1)
+        prediction[unc < self.reluctant_threhold] = y[unc < self.reluctant_threhold]
 
         return prediction
