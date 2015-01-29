@@ -135,7 +135,7 @@ class Experiment(object):
         trial = []
         self._setup_options(self.config)
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
-                                          shuffle=True, percent=self.split)
+                                          shuffle=True, percent=self.split, keep_subject=True)
         # self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
         t = 0

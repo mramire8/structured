@@ -73,7 +73,7 @@ def load_imdb(path, subset="all", shuffle=True, rnd=2356):
     return data
 
 
-def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None):
+def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None, keep_suject=False):
     """
     load text files from Aviation-auto dataset from folders to memory. It will return a 25-75 percent train test split
     :param path: path of the root directory of the data
@@ -91,7 +91,7 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None):
     elif subset == "all":
         data = load_files(path, encoding="latin1", load_content=True,
                                    random_state=rnd)
-        data.data = np.array([keep_header_subject(text) for text in data.data], dtype=object)
+        data.data = np.array([keep_header_subject(text, keep_subject=keep_suject) for text in data.data], dtype=object)
     else:
         raise ValueError(
             "subset can only be 'train', 'test' or 'all', got '%s'" % subset)
@@ -154,12 +154,12 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
     data.train = fetch_20newsgroups(subset='train', categories=cat, remove=('headers','footers', 'quotes'),
                                     shuffle=shuffle, random_state=rnd)
 
-    data.train.data = np.array([keep_header_subject(text) for text in data.train.data], dtype=object)
+    # data.train.data = np.array([keep_header_subject(text) for text in data.train.data], dtype=object)
 
     data.test = fetch_20newsgroups(subset='test', categories=cat, remove=('headers','footers', 'quotes'),
                                    shuffle=shuffle, random_state=rnd)
 
-    data.test.data = np.array([keep_header_subject(text) for text in data.test.data], dtype=object)
+    # data.test.data = np.array([keep_header_subject(text) for text in data.test.data], dtype=object)
 
     data = minimum_size(data)
 
@@ -319,7 +319,7 @@ def load_twitter(path, shuffle=True, rnd=1):
     return data
 
 
-def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5):
+def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5, keep_subject=False):
     data = bunch.Bunch()
 
     if "imdb" in name:
@@ -328,7 +328,7 @@ def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5
         data = load_imdb(path, shuffle=shuffle, rnd=rnd)  # should brind data as is
     elif "sraa" in name:
         ########## sraa dataset ######
-        data = load_aviation(path, shuffle=shuffle, rnd=rnd, percent=percent)
+        data = load_aviation(path, shuffle=shuffle, rnd=rnd, percent=percent, keep_suject=keep_subject)
     elif "20news" in name:
         ########## 20 news groups ######
         data = load_20newsgroups(category=categories, shuffle=shuffle, rnd=rnd)
