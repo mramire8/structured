@@ -83,6 +83,12 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
         learner = Joint(clf, snippet_fn=None, utility_fn=None, seed=seed)
     elif learn_config['type'] == 'sequential':
         learner = Sequential(clf, snippet_fn=None, utility_fn=None, seed=seed)
+    elif learn_config['type'] == 'sequential_single':
+        from learner.single_student import SequentialSingleStudent
+        learner = SequentialSingleStudent(clf, snippet_fn=None, utility_fn=None, seed=seed)
+    elif learn_config['type'] == 'joint_single':
+        from learner.single_student import JointSingleStudent
+        learner = JointSingleStudent(clf, snippet_fn=None, utility_fn=None, seed=seed)
     else:
         raise ValueError("We don't know {} leaner".format(learn_config['type']))
     learner.set_utility(learn_config['utility'])

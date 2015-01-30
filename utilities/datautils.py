@@ -155,12 +155,12 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
                                     shuffle=shuffle, random_state=rnd)
 
     # data.train.data = np.array([keep_header_subject(text) for text in data.train.data], dtype=object)
-
+    data.train.data = np.array(data.train.data, dtype=object)
     data.test = fetch_20newsgroups(subset='test', categories=cat, remove=('headers','footers', 'quotes'),
                                    shuffle=shuffle, random_state=rnd)
 
     # data.test.data = np.array([keep_header_subject(text) for text in data.test.data], dtype=object)
-
+    data.test.data = np.array(data.test.data, dtype=object)
     data = minimum_size(data)
 
     if shuffle:
