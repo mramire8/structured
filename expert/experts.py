@@ -150,3 +150,21 @@ class PerfectReluctantDocumentExpert(PredictingExpert):
         prediction[unc < self.reluctant_threhold] = y[unc < self.reluctant_threhold]
 
         return prediction
+
+
+class TrueReluctantExpert(TrueExpert):
+
+    def __init__(self, oracle, reluctant_p,  seed=43212):
+        super(TrueReluctantExpert, self).__init__(oracle)
+        self.rnd = np.random.RandomState(seed)
+        self.reluctant_p = reluctant_p
+
+    def label(self, data, y=None):
+
+        prediction = np.array(y, dtype=object)  # copy the true labels
+
+        coin = self.rnd.random_sample(len(y))  # flip a coin for neutral probability
+
+        prediction[coin < self.reluctant_p] = None  ## if coin is < p then is neutral
+
+        return prediction

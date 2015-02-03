@@ -54,23 +54,24 @@ def get_classifier(cl_name, **kwargs):
     from sklearn.naive_bayes import MultinomialNB
     from sklearn.linear_model import LogisticRegression
     clf = None
-    if cl_name in "mnb":
-        alpha = 1
-        if 'parameter' in kwargs:
-            alpha = kwargs['parameter']
-        clf = MultinomialNB(alpha=alpha)
-    elif cl_name == "lr" or cl_name == "lrl1":
-        c = 1
-        if 'parameter' in kwargs:
-            c = kwargs['parameter']
-        clf = LogisticRegression(penalty="l1", C=c)
-    elif cl_name == "lrl2":
-        c = 1
-        if 'parameter' in kwargs:
-            c = kwargs['parameter']
-        clf = LogisticRegression(penalty="l2", C=c)
-    else:
-        raise ValueError("We need a classifier name for the student [lr|mnb]")
+    if cl_name is not None:
+        if cl_name in "mnb":
+            alpha = 1
+            if 'parameter' in kwargs:
+                alpha = kwargs['parameter']
+            clf = MultinomialNB(alpha=alpha)
+        elif cl_name == "lr" or cl_name == "lrl1":
+            c = 1
+            if 'parameter' in kwargs:
+                c = kwargs['parameter']
+            clf = LogisticRegression(penalty="l1", C=c)
+        elif cl_name == "lrl2":
+            c = 1
+            if 'parameter' in kwargs:
+                c = kwargs['parameter']
+            clf = LogisticRegression(penalty="l2", C=c)
+        else:
+            raise ValueError("We need a classifier name for the student [lr|mnb]")
     return clf
 
 
@@ -104,7 +105,7 @@ def get_expert(config):
 
     from expert.experts import PredictingExpert, SentenceExpert, \
         TrueExpert, NoisyExpert, ReluctantSentenceExpert, ReluctantDocumentExpert, \
-        PerfectReluctantDocumentExpert
+        PerfectReluctantDocumentExpert, TrueReluctantExpert
     cl_name = config['model']
     clf = get_classifier(cl_name, parameter=config['parameter'])
 
@@ -125,9 +126,12 @@ def get_expert(config):
     elif config['type'] == 'docneutral' or config['type'] == 'noisyreluctant' :
         p = config['threshold']
         expert = ReluctantDocumentExpert(clf, p)
-    elif config['type'] == 'perfectreluctant':
+    elif config['type'] == 'perfectreluctant': # reluctant based on unc threshold
         p = config['threshold']
         expert = PerfectReluctantDocumentExpert(clf, p)
+    elif config['type'] == 'truereluctant':  # reluctant based on p probability
+        p = config['threshold']
+        expert = TrueReluctantExpert(None, p)
     else:
         raise Exception("We don't know {} expert".format(config['type']))
 
