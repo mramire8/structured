@@ -161,7 +161,7 @@ class TrueReluctantExpert(TrueExpert):
 
     def label(self, data, y=None):
 
-        prediction = np.array(y, dtype=object)  # copy the true labels
+        prediction = y.copy()  # copy the true labels
 
         coin = self.rnd.random_sample(len(y))  # flip a coin for neutral probability
 

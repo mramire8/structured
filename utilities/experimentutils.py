@@ -130,7 +130,7 @@ def get_expert(config):
         p = config['threshold']
         expert = PerfectReluctantDocumentExpert(clf, p)
     elif config['type'] == 'truereluctant':  # reluctant based on p probability
-        p = config['threshold']
+        p = config['neutral_p']
         expert = TrueReluctantExpert(None, p)
     else:
         raise Exception("We don't know {} expert".format(config['type']))
