@@ -12,7 +12,7 @@ import utilities.experimentutils as exputil
 
 from sklearn.datasets import base as bunch
 from learner.strategy import BootstrapFromEach
-
+from sklearn import metrics
 
 class Study(object):
     def __init__(self, dataname, config, verbose=False, debug=False):
@@ -47,7 +47,7 @@ class Study(object):
         :return:
         '''
         type_exp = cfgutil.get_section_options(config, 'expert')
-        if type_exp == 'human':
+        if type_exp['type'] == 'human':
             from expert.human_expert import HumanExpert
             names = ", ".join(["{}={}".format(a,b) for a,b in enumerate(target_names + ['neutral'])])+" ? > "
             expert = HumanExpert(None, names)
@@ -64,7 +64,7 @@ class Study(object):
                                       vct=self.vct, sent_tk=self.sent_tokenizer, seed=self.seed)
         return student1, student2
 
-    def evaluate_student(self):
+    def evaluate_student(self, student, sequence, data):
         '''
         After getting labels, train and evaluated students for plotting
         :return:
@@ -72,12 +72,21 @@ class Study(object):
 
         pass
 
-    def record_labels(self):
+    def record_labels(self, expert_labels, query, labels, time=None):
         '''
         Save data labels from the expert
         :return:
         '''
-        pass
+        expert_labels['index'].append(query.index)
+        expert_labels['labels'].extend(labels)
+        expert_labels['time'].extend(time)
+        return expert_labels
+
+    def start_record(self):
+        r = {}
+        r['index'] = []
+        r['labels'] = []
+        return r
 
     def retrain(self, learner, pool, train):
         '''
@@ -98,8 +107,25 @@ class Study(object):
         '''
         pass
 
-    def set_options(self, config):
-        pass
+    def set_options(self, config_obj):
+        self.seed = None
+        self.rnd_state = np.random.RandomState(32564)
+
+
+        config = cfgutil.get_section_options(config_obj, 'data')
+        self.data_cat = config['categories']
+        self.data_path = config['path']
+        self.split = config['split']
+        self.vct = exputil.get_vectorizer(config)
+
+        config = cfgutil.get_section_options(config_obj, 'expert')
+        self.sent_tokenizer = exputil.get_tokenizer(config['sent_tokenizer'])
+
+        config = cfgutil.get_section_options(config_obj, 'experiment')
+
+        self.budget = config['budget']
+        self.step = config['stepsize']
+
 
     def update_pool(self, pool, query, labels, train):
         ## remove from remaining
@@ -125,6 +151,44 @@ class Study(object):
         return current_cost + query.bow.shape[0]
 
 
+    def evaluate_oracle(self, query, predictions, labels=None):
+        t = np.array([[x,y] for x,y in zip(query.target, predictions) if y is not None])
+        cm = np.zeros((2,2))
+        if len(t)> 0:
+            cm = metrics.confusion_matrix(t[:,0], t[:,1], labels=labels)
+        return cm
+
+    def _sample_data(self, data, train_idx, test_idx):
+        sample = bunch.Bunch(train=bunch.Bunch(), test=bunch.Bunch())
+
+        if len(test_idx) > 0: #if there are test indexes
+            sample.train.data = np.array(data.data, dtype=object)[train_idx]
+            sample.test.data = np.array(data.data, dtype=object)[test_idx]
+
+            sample.train.target = data.target[train_idx]
+            sample.test.target = data.target[test_idx]
+
+            sample.train.bow = self.vct.fit_transform(sample.train.data)
+            sample.test.bow = self.vct.transform(sample.test.data)
+
+            sample.target_names = data.target_names
+            sample.train.remaining = []
+        else:
+            ## Just shuffle the data and vectorize
+            sample = data
+            data_lst = np.array(data.train.data, dtype=object)
+            data_lst = data_lst[train_idx]
+            sample.train.data = data_lst
+
+            sample.train.target = data.train.target[train_idx]
+
+            sample.train.bow = self.vct.fit_transform(data.train.data)
+            sample.test.bow = self.vct.transform(data.test.data)
+
+            sample.train.remaining = []
+
+        return sample.train, sample.test
+
     def start(self):
         from collections import deque
 
@@ -132,16 +196,21 @@ class Study(object):
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
                                           shuffle=True, percent=self.split, keep_subject=True)
         student1, student2 = self.get_student(self.config)
-        sequence = self.get_sequence(self.budget)
+        sequence = self.get_sequence(len(self.data.train.target))
 
         expert = self.get_expert(self.config, self.data.train.target_names)
 
         combined_budget = self.budget * 2
-        coin = np.random.RandomState(9182837465)
+        coin = np.random.RandomState(9187465)
 
-        pool = None
+        pool, test = self._sample_data(self.data, sequence, [])
+        remaining = deque(sequence)
+        pool.remaining = remaining
+
         train = bunch.Bunch(index=[], target=[])
         i = 0
+        expert_labels = self.start_record()
+
         while combined_budget > 0:
             if i == 0:
                 ## Bootstrap
@@ -151,41 +220,44 @@ class Study(object):
                 # student2 = self.retrain(student2, pool, train)
             else:
                 #select student
-                next = coin.random_sample()
-                student = None
+                next_turn = coin.random_sample()
 
-                if next < .5:
+                if next_turn < .5:
                     student = student1
-                else:
+                else: # first1 student
                     student = student2
 
                 # select query and query labels
                 query = student.next(pool, self.step)
-                labels = expert.label(query.data, y=query.target)
+                labels = expert.label(query.snippet, y=query.target)
 
                 # update pool and cost
                 pool, train = self.update_pool(pool, query, labels, train)
                 combined_budget = self.update_cost(combined_budget, expert)
 
                 # re-train the learner
-                student = self.retrain(student, pool, train)
+                if next_turn < .5:
+                    student1 = self.retrain(student1, pool, train)
+                else:
+                    # first1 student no need to train
+                    student2 = self.retrain(student2, pool, train)
 
                 # record labels
-                self.record_labels(query, labels)
+                expert_labels = self.record_labels(expert_labels, query, labels, time=expert.get_annotation_time())
                 # step_results = self.evaluate(student, test)
+
+                #We can evaluate later
                 # step_oracle = self.evaluate_oracle(query, labels, labels=np.unique(pool.target))
+                print self.evaluate_oracle(query, labels, labels=np.unique(pool.target))
+
 
                 if self.debug:
-                    self._debug(student, expert, query)
-
-                # get document in sequence
-
-                #select questies
-                #ask queries
-                #record answers
-                # get codt
+                    #TODO print out information?
+                    # self._debug(student, expert, query)
+                    pass
 
             i += 1
 
-        self.evaluate_student(self.student1, sequence, self.data)
-        self.evaluate_student(self.student2, sequence, self.data)
+        ##TODO evaluate the students after getting labels
+        self.evaluate_student(student1, sequence, self.data)
+        self.evaluate_student(student2, sequence, self.data)

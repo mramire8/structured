@@ -22,7 +22,7 @@ ap.add_argument('--debug',
 ap.add_argument('--config',
                 metavar='CONFIG_FILE',
                 type=str,
-                default='./default.cfg',
+                default='./study.cfg',
                 help='Experiment configuration file')
 
 

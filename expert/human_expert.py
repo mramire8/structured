@@ -12,7 +12,8 @@ class HumanExpert(BaseExpert):
 
     def label(self, data, y=None):
         import time
-        answer = None
+        labels = []
+        times = []
         for doc in data:
             print
             print ("-"*40)
@@ -30,11 +31,12 @@ class HumanExpert(BaseExpert):
                         valid = False
                     else:
                         valid = True
+                        labels.append(answer)
                 except ValueError:
                    valid = False
-
             self.elapsed_time = time.time() - t0
-        return answer
+            times.append(self.elapsed_time)
+        return labels
 
     def fit(self, data, y=None):
         pass
