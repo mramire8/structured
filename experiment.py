@@ -7,7 +7,7 @@ ap = argparse.ArgumentParser(description=__doc__,
 ap.add_argument('--train',
                 metavar='TRAIN',
                 default="20news",
-                choices=['imdb', 'sraa', '20news', 'twitter'],
+                choices=['imdb', 'sraa', '20news', 'twitter','arxiv'],
                 help='training data (libSVM format)')
 
 ap.add_argument('--verbose',
