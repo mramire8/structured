@@ -33,17 +33,20 @@ class Study(object):
         self.sent_tokenizer = None
 
         self.budget = None
+        self.bootstrap_size = None
         self.step = 1
         self.debug = debug
         self.verbose = verbose
         self.learner1 = None
         self.learner2 = None
 
-    def get_sequence(self, n):
+    def get_sequence(self, n, subsample):
         ''' Get a sequence of document for the study
         :return:
         '''
+        # seq = self.rnd_state.choice(range(n), subsample, False)
         seq = self.rnd_state.permutation(n)
+
         return seq
 
     def get_expert(self, config, target_names):
@@ -62,23 +65,31 @@ class Study(object):
         return expert
 
     def get_student(self, config, pool, sequence):
-
+        from collections import deque
         l1 = cfgutil.get_section_options(config, 'learner1')
 
+        pool[0].remaining = deque(sequence)
         student1 = exputil.get_learner(l1, vct=self.vct, sent_tk=self.sent_tokenizer, seed=self.seed)
 
         self.learner1 = bunch.Bunch(student=student1, name="{}-{}".format(l1['utility'], l1['snippet']),
-                                    pool=pool, train=[], budget=0, sequence=sequence)
+                                    pool=pool[0], train=[], budget=0, sequence=sequence)
 
         l1 = cfgutil.get_section_options(config, 'learner2')
 
         student2 = exputil.get_learner(l1, vct=self.vct, sent_tk=self.sent_tokenizer, seed=self.seed)
 
+        ## reshuffle the sequence
+        rnd2 = np.random.RandomState(9187465)
+        sequence2 = [s for s in sequence]
+        rnd2.shuffle(sequence2)
+
+        # udpade the pool
+        pool[1].remaining = deque(sequence2)
         self.learner2 = bunch.Bunch(student=student2, name="{}-{}".format(l1['utility'], l1['snippet']),
-                                    pool=pool, train=[], budget=0, sequence=sequence)
+                                    pool=pool[1], train=[], budget=0, sequence=sequence2)
         return self.learner1, self.learner2
 
-    def evaluate_student(self, student, sequence, data):
+    def evaluate_student(self, student, sequence, data, test):
         '''
         After getting labels, train and evaluated students for plotting
         :return:
@@ -91,12 +102,12 @@ class Study(object):
         Save data labels from the expert
         :return:
         '''
-        expert_labels['index'].append(query.index)
-        expert_labels['true'].append(query.target)
+        expert_labels['index'].extend(query.index)
+        expert_labels['true'].extend(query.target)
         expert_labels['labels'].extend(labels)
         expert_labels['time'].append(time)
-        expert_labels['data'].append(query.text)
-        expert_labels['snip'].append(query.snippet)
+        expert_labels['text'].extend(query.text)
+        expert_labels['snip'].extend(query.snippet)
         return expert_labels
 
     def start_record(self):
@@ -105,6 +116,8 @@ class Study(object):
         r['labels'] = []
         r['true'] = []
         r['time'] = []
+        r['text'] = []
+        r['snip'] = []
         return r
 
     def retrain(self, learner, pool, train):
@@ -134,11 +147,15 @@ class Study(object):
         output_name = self.output + "/" + students['learner2'].name
         self._save_student_labels(students['learner2'], filename=output_name + "-student-labels.txt")
 
-        self._save_oracle_labels(expert_labels)
+        output_name = self.output + "/" + students['learner1'].name
+        self._save_oracle_labels(expert_labels['learner1'], filename=output_name + "-expert1-labels.txt")
+
+        output_name = self.output + "/" + students['learner2'].name
+        self._save_oracle_labels(expert_labels['learner2'], filename=output_name + "-expert2-labels.txt")
 
     def _save_student_labels(self, student, filename='student'):
         f = open(filename, "w")
-        f.write("doc_index\ttrue_label\texp_label")
+        f.write("doc_index\ttrue_label\texp_label\n")
         for i, doc_i in enumerate(student.train.index):
             f.write("{}\t{}\t{}\n".format(doc_i, student.pool.target[doc_i], student.train.target[i]))
         f.close()
@@ -146,13 +163,14 @@ class Study(object):
     def _save_oracle_labels(self, expert, filename='expert'):
 
         f = open(filename, "w")
-        f.write("doc_index\ttrue_label\texp_label\tsnippet\tdoc_text")
-        n = len(expert['index'])
+        f.write("doc_index\ttrue_label\texp_label\tsnippet\tdoc_text\n")
+        exp = expert
+        n = len(exp['index'])
         for i in range(n):
-            txt = expert['text'][i].replace('\n',' ').replace('\t',' ')
-            snip = expert['snippet'][i].replace('\n',' ').replace('\t',' ')
-            f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(expert['index'][i], expert['true'][i], expert['labels'][i],
-                                                      expert['time'][i], snip, txt))
+            txt = exp['text'][i].replace('\n',' ').replace('\t',' ')
+            snip = exp['snip'][i].replace('\n',' ').replace('\t',' ')
+            f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(exp['index'][i], exp['true'][i], exp['labels'][i],
+                                                      exp['time'][i], snip, txt))
         f.close()
 
 
@@ -173,12 +191,13 @@ class Study(object):
         self.budget = config['budget']
         self.step = config['stepsize']
         self.output = config['outputdir']
+        self.bootstrap_size = config['bootstrap']
 
     def update_pool(self, pool, query, labels, train):
         ## remove from remaining
         for q, t in zip(query.index, labels):
             pool.remaining.remove(q)
-            if t is not None:  # if the answer is not neutral
+            if t is not None and t < 2:  # if the answer is not neutral
                 train.index.append(q)
                 train.target.append(t)
 
@@ -237,22 +256,24 @@ class Study(object):
         return sample.train, sample.test
 
     def start(self):
+        import copy
         from collections import deque
 
         self.set_options(self.config)
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
                                           shuffle=True, percent=self.split, keep_subject=True)
 
-        sequence = self.get_sequence(len(self.data.train.target))
+        sequence = self.get_sequence(len(self.data.train.target), self.budget+self.bootstrap_size)
+
         pool, test = self._sample_data(self.data, sequence, [])
-        student1, student2 = self.get_student(self.config, pool, sequence)
+        pool2 = copy.deepcopy(pool)
+        student1, student2 = self.get_student(self.config, [pool, pool2], sequence)
 
         expert = self.get_expert(self.config, self.data.train.target_names)
 
-        combined_budget = self.budget * 2
+        combined_budget = 0
         coin = np.random.RandomState(9187465)
 
-        train = bunch.Bunch(index=[], target=[])
         i = 0
         # expert_labels = self.start_record()
         student = {'learner1':student1, 'learner2':student2}
@@ -263,23 +284,34 @@ class Study(object):
             if i == 0:
                 ## Bootstrap
                 # bootstrap
-                train = self.bootstrap(pool, 50, train)
+                train = self.bootstrap(student['learner1'].pool, 50, bunch.Bunch(index=[], target=[]))
+                train2 = self.bootstrap(student['learner2'].pool, 50, bunch.Bunch(index=[], target=[]))
+
+                student['learner1'].train = train
+                student['learner2'].train = train2
+
                 student['learner1'].student = self.retrain(student['learner1'].student, student['learner1'].pool,
                                                            student['learner1'].train)
                 student['learner2'].student = self.retrain(student['learner2'].student, student['learner2'].pool,
                                                            student['learner2'].train)
+
+                tmp_list = list(student['learner1'].pool.remaining)
+                pool_sample = self.rnd_state.choice(tmp_list, self.budget, False)
+                student['learner1'].pool.remaining = deque(pool_sample)
+                self.rnd_state.shuffle(pool_sample)
+                student['learner2'].pool.remaining = deque(pool_sample)
+
             else:
                 # select student
                 next_turn = coin.random_sample()
-                print next_turn
 
                 if next_turn < .5:
-                    curr_student = 'leaner1'
+                    curr_student = 'learner1'
                 else:  # first1 student
                     curr_student = 'learner2'
 
-                query, labels = self.al_cycle(student, expert)
-
+                query, labels = self.al_cycle(student[curr_student], expert)
+                print len(student['learner1'].pool.remaining), len(student['learner2'].pool.remaining)
                 if query is not None and labels is not None:
                     # re-train the learner
                     student[curr_student].student = self.retrain(student[curr_student].student,
@@ -301,13 +333,13 @@ class Study(object):
 
         self.save_results(student, expert_times, expert_labels)
         ##TODO evaluate the students after getting labels
-        self.evaluate_student(student['learner1'], sequence, self.data)
-        self.evaluate_student(student['learner2'], sequence, self.data)
+        self.evaluate_student(student['learner1'], sequence, self.data, test)
+        self.evaluate_student(student['learner2'], sequence, self.data, test)
 
     def al_cycle(self, student, expert):
         query = None
         labels = None
-        if student.budget <= self.budget:
+        if student.budget < self.budget:
             query = student.student.next(student.pool, self.step)
             labels = expert.label(query.snippet, y=query.target)
 
@@ -319,7 +351,7 @@ class Study(object):
 
 
     def _debug(self, student, expert, query, step_oracle):
-        print "Student: %s" % student
+        print "Student: %s" % student.name
         print "Time: %.2f" % expert.get_annotation_time()
         print "Oracle CM"
         print "\n".join(["{}\t{}".format(*r) for r in step_oracle])

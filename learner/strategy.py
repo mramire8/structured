@@ -297,7 +297,8 @@ class Sequential(StructuredLearner):
 
         # compute utility
         utility = self._compute_utility(x)
-
+        if isinstance(utility, float):
+            utility = np.array([utility])
         #compute best snippet
         snippet, snippet_text = self._compute_snippet(x_text)
 
