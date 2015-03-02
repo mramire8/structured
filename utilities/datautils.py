@@ -318,6 +318,58 @@ def load_twitter(path, shuffle=True, rnd=1):
 
     return data
 
+#ARXIV_HOME = 'C:/Users/mramire8/Documents/Datasets/arxiv'
+def load_arxiv(path, category=None, subset="all", shuffle=True, rnd=2356, percent=.5):
+    """
+    load text files from Aviation-auto dataset from folders to memory. It will return a 25-75 percent train test split
+    :param path: path of the root directory of the data
+    :param subset: what data will be loaded, train or test or all
+    :param shuffle:
+    :param rnd: random seed value
+    :param vct: vectorizer
+    :return: :raise ValueError:
+    """
+    from sklearn.cross_validation import ShuffleSplit
+
+    categories = {'ml': ['alt.atheism', 'talk.religion.misc'],
+                  'physics': ['comp.graphics', 'comp.windows.x']}
+
+    cat = None
+    if category is not None:
+        cat = categories[category]
+
+    data = bunch.Bunch()
+
+    if subset in ('train', 'test'):
+        raise ValueError("We are not ready for train test aviation data yet")
+    elif subset == "all":
+        data = load_files(path, encoding="latin1", load_content=True, random_state=rnd, categories=cat)
+        data.data = np.array(data.data, dtype=object)
+    else:
+        raise ValueError("Subset can only be 'train', 'test' or 'all', got '%s'" % subset)
+
+    indices = ShuffleSplit(len(data.data), n_iter=1, test_size=percent, random_state=rnd)
+    for train_ind, test_ind in indices:
+        data = bunch.Bunch(train=bunch.Bunch(data=data.data[train_ind], target=data.target[train_ind],
+                                             filenames=data.filenames[train_ind], target_names=data.target_names),
+                           test=bunch.Bunch(data=data.data[test_ind], target=data.target[test_ind],
+                                            filenames=data.filenames[test_ind], target_names=data.target_names))
+
+    if shuffle:
+        random_state = np.random.RandomState(rnd)
+        indices = np.arange(data.train.target.shape[0])
+        random_state.shuffle(indices)
+        data.train.filenames = data.train.filenames[indices]
+        data.train.target = data.train.target[indices]
+        # Use an object array to shuffle: avoids memory copy
+        data_lst = np.array(data.train.data, dtype=object)
+        data_lst = data_lst[indices]
+        data.train.data = data_lst
+        data.test.data = np.array(data.test.data, dtype=object)
+
+    data = minimum_size(data)
+    return data
+
 
 def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5, keep_subject=False):
     data = bunch.Bunch()
@@ -332,6 +384,9 @@ def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5
     elif "20news" in name:
         ########## 20 news groups ######
         data = load_20newsgroups(category=categories, shuffle=shuffle, rnd=rnd)
+    elif "arxiv" in name:
+        ########## 20 news groups ######
+        data = load_arxiv(path, category=categories, subset='all', shuffle=shuffle, rnd=rnd, percent=percent)
     elif "twitter" in name:
         ########## 20 news groups ######
         data = load_twitter(path, shuffle=shuffle, rnd=rnd)
