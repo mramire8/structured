@@ -242,8 +242,8 @@ class Study(object):
         exp = expert
         n = len(exp['index'])
         for i in range(n):
-            txt = exp['text'][i].replace('\n',' ').replace('\t',' ')
-            snip = exp['snip'][i].replace('\n',' ').replace('\t',' ')
+            txt = exp['text'][i].encode('latin1').replace('\n',' ').replace('\t',' ')
+            snip = exp['snip'][i].encode('latin1').replace('\n',' ').replace('\t',' ')
             f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(exp['index'][i], exp['true'][i], exp['labels'][i],
                                                       exp['time'][i], snip, txt))
         f.close()
@@ -322,6 +322,7 @@ class Study(object):
             cm = metrics.confusion_matrix(t[:, 0], t[:, 1], labels=labels)
         return cm
 
+
     def _sample_data(self, data, train_idx, test_idx):
         sample = bunch.Bunch(train=bunch.Bunch(), test=bunch.Bunch())
 
@@ -353,6 +354,12 @@ class Study(object):
 
         return sample.train, sample.test
 
+    def copy_pool(self, obj):
+        import copy
+        pool2= bunch.Bunch(data=copy.copy(obj.data), bow=copy.copy(obj.bow),
+                           target=copy.copy(obj.target), remaining=copy.copy(obj.remaining))
+        return pool2
+
     def start(self):
         import copy
         from collections import deque
@@ -364,7 +371,11 @@ class Study(object):
         sequence = self.get_sequence(len(self.data.train.target), self.budget+self.bootstrap_size)
 
         pool, test = self._sample_data(self.data, sequence, [])
-        pool2 = copy.deepcopy(pool)
+        # pool2, _ = self._sample_data(self.data, sequence, [])
+        # pool2 = copy.deepcopy(pool)
+        pool2 = self.copy_pool(pool)
+        # pool2.remaining = []
+
         student1, student2 = self.get_student(self.config, [pool, pool2], sequence)
 
         expert = self.get_expert(self.config, self.data.train.target_names)
@@ -389,6 +400,7 @@ class Study(object):
 
                 student['learner1'].student = self.retrain(student['learner1'].student, student['learner1'].pool,
                                                            student['learner1'].train)
+
                 student['learner2'].student = self.retrain(student['learner2'].student, student['learner2'].pool,
                                                            student['learner2'].train)
 
@@ -444,9 +456,9 @@ class Study(object):
         self.evaluate_student(student['learner1'].student.model, t, original_sequence, pool, test,
                               name=student['learner1'].name, order=False)
 
-        t = bunch.Bunch(index=expert_labels['learner2']['index'], target=expert_labels['learner1']['labels'])
+        t = bunch.Bunch(index=expert_labels['learner2']['index'], target=expert_labels['learner2']['labels'])
         self.evaluate_student(student['learner2'].student.model, t, original_sequence, pool, test,
-                              name=student['learner1'].name, order=True)
+                              name=student['learner2'].name, order=True)
 
     def al_cycle(self, student, expert):
         query = None
