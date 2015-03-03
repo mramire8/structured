@@ -89,13 +89,88 @@ class Study(object):
                                     pool=pool[1], train=[], budget=0, sequence=sequence2)
         return self.learner1, self.learner2
 
-    def evaluate_student(self, student, sequence, data, test):
+    def _evaluate(self, learner, test):
+        prediction = learner.predict(test.bow)
+        pred_proba = learner.predict_proba(test.bow)
+        accu = metrics.accuracy_score(test.target, prediction)
+        auc = metrics.roc_auc_score(test.target, pred_proba[:, 1])
+        return {'auc': auc, 'accuracy': accu}
+
+
+    def evaluate_student(self, student_clf, train, sequence, data, test, name='', order=False):
         '''
         After getting labels, train and evaluated students for plotting
         :return:
         '''
+        from collections import defaultdict
 
-        pass
+        if order:
+            # train = student.train
+            order1 = np.argsort(sequence[self.bootstrap_size:])
+            order2 = np.argsort(train.index)
+            new_target = np.array(train.target)[order1][order2]
+            train.target = new_target
+            train.index = sequence
+
+        x = range(self.bootstrap_size, len(sequence)+1, 1)
+        cost = np.array(x, dtype=object)
+        results = dict()
+        results['accuracy'] = defaultdict(lambda: [])
+        results['auc'] = defaultdict(lambda: [])
+        results['ora_accu'] = defaultdict(lambda: [])
+
+        for i, c in zip(x, cost):
+            if i == 50:
+                train_idx = sequence[:i]
+                train_target = data.target[train_idx]
+
+            else:
+                # train student
+
+                non_neutral = np.array(train.target[:i]) < 2
+                train_idx = np.append(np.array(sequence[:self.bootstrap_size]), np.array(train.index[:i])[non_neutral])
+                train_target = np.append(data.target[sequence[:self.bootstrap_size]], np.array(train.target[:i])[non_neutral])
+
+            student_clf.fit(data.bow[train_idx], train_target)
+
+            # test
+            prediction = student_clf.predict(test.bow)
+            pred_proba = student_clf.predict_proba(test.bow)
+
+            accu = metrics.accuracy_score(test.target, prediction)
+            auc = metrics.roc_auc_score(test.target, pred_proba[:, 1])
+
+            oracle = metrics.confusion_matrix(data.target[train_idx], train_target, labels=[0,1])
+            # record
+            results['accuracy'][c].append(accu)
+            results['auc'][c].append(auc)
+            results['ora_accu'][c].append(oracle)
+
+            print c, accu, auc
+
+        #save all
+        self.save_evaluation_results(results, name=name)
+
+    def save_evaluation_results(self, results, name='student'):
+        output_name = self.output + "/" + self.dataname + "-" + name + "-curve-"
+
+        accu = results['accuracy']
+        xaxis = results['accuracy'].keys()
+        y = [np.mean(accu[x]) for x in xaxis]
+
+        self._print_file(xaxis, y, output_name + "accu.txt")
+
+        accu = results['auc']
+        xaxis = results['auc'].keys()
+        y = [np.mean(accu[x]) for x in xaxis]
+
+        self._print_file(xaxis, y, output_name + "auc.txt")
+
+        accu = results['ora_accu']
+        xaxis = results['ora_accu'].keys()
+        y = ["\t".join("{}\t{}".format(*xx) for xx in accu[x]) for x in xaxis]
+
+        self._print_file2(xaxis, y, output_name + "cm.txt")
 
     def record_labels(self, expert_labels, query, labels, time=None):
         '''
@@ -138,19 +213,19 @@ class Study(object):
         :return:
         '''
 
-        output_name = self.output + "/" + students['learner1'].name
+        output_name = self.output + "/" + self.dataname+"-"+students['learner1'].name
         if not os.path.exists(self.output):
             os.makedirs(self.output)
 
         self._save_student_labels(students['learner1'], filename=output_name + "-student-labels.txt")
 
-        output_name = self.output + "/" + students['learner2'].name
+        output_name = self.output + "/" + self.dataname+"-"+students['learner2'].name
         self._save_student_labels(students['learner2'], filename=output_name + "-student-labels.txt")
 
-        output_name = self.output + "/" + students['learner1'].name
+        output_name = self.output + "/" + self.dataname+"-"+students['learner1'].name
         self._save_oracle_labels(expert_labels['learner1'], filename=output_name + "-expert1-labels.txt")
 
-        output_name = self.output + "/" + students['learner2'].name
+        output_name = self.output + "/" + self.dataname+"-"+ students['learner2'].name
         self._save_oracle_labels(expert_labels['learner2'], filename=output_name + "-expert2-labels.txt")
 
     def _save_student_labels(self, student, filename='student'):
@@ -173,6 +248,29 @@ class Study(object):
                                                       exp['time'][i], snip, txt))
         f.close()
 
+    def _print_file(self, x, y, file_name):
+        import os
+        dir_file = os.path.dirname(file_name)
+        if not os.path.exists(dir_file):
+            os.makedirs(dir_file)
+
+        f = open(file_name, "w")
+        f.write("COST\tMEAN\n")
+        for a, b in zip(x, y):
+            f.write("{0:.3f}\t{1:.3f}\n".format(a, b))
+        f.close()
+
+    def _print_file2(self, x, y, file_name):
+        import os
+        dir_file = os.path.dirname(file_name)
+        if not os.path.exists(dir_file):
+            os.makedirs(dir_file)
+
+        f = open(file_name, "w")
+        f.write("COST\tMEAN\n")
+        for a, b in zip(x, y):
+            f.write("{}\t{}\n".format(a, b))
+        f.close()
 
     def set_options(self, config_obj):
         self.rnd_state = np.random.RandomState(32564)
@@ -279,28 +377,32 @@ class Study(object):
         student = {'learner1':student1, 'learner2':student2}
         expert_times = {'learner1':[], 'learner2':[]}
         expert_labels = {'learner1': self.start_record(), 'learner2': self.start_record()}
-
+        original_sequence = []
         while combined_budget < (2 * self.budget):
             if i == 0:
                 ## Bootstrap
                 # bootstrap
-                train = self.bootstrap(student['learner1'].pool, 50, bunch.Bunch(index=[], target=[]))
-                train2 = self.bootstrap(student['learner2'].pool, 50, bunch.Bunch(index=[], target=[]))
+                train = self.bootstrap(student['learner1'].pool, self.bootstrap_size, bunch.Bunch(index=[], target=[]))
 
                 student['learner1'].train = train
-                student['learner2'].train = train2
+                student['learner2'].train = bunch.Bunch(index=copy.copy(train.index), target=copy.copy(train.target))
 
                 student['learner1'].student = self.retrain(student['learner1'].student, student['learner1'].pool,
                                                            student['learner1'].train)
                 student['learner2'].student = self.retrain(student['learner2'].student, student['learner2'].pool,
                                                            student['learner2'].train)
 
+                for t in train.index:
+                    student['learner1'].pool.remaining.remove(t)
+                    student['learner2'].pool.remaining.remove(t)
+
                 tmp_list = list(student['learner1'].pool.remaining)
                 pool_sample = self.rnd_state.choice(tmp_list, self.budget, False)
                 student['learner1'].pool.remaining = deque(pool_sample)
+                original_sequence = copy.copy(train.index) + list(pool_sample)
+
                 self.rnd_state.shuffle(pool_sample)
                 student['learner2'].pool.remaining = deque(pool_sample)
-
             else:
                 # select student
                 next_turn = coin.random_sample()
@@ -311,7 +413,9 @@ class Study(object):
                     curr_student = 'learner2'
 
                 query, labels = self.al_cycle(student[curr_student], expert)
-                print len(student['learner1'].pool.remaining), len(student['learner2'].pool.remaining)
+
+                # print len(student['learner1'].pool.remaining), len(student['learner2'].pool.remaining)
+
                 if query is not None and labels is not None:
                     # re-train the learner
                     student[curr_student].student = self.retrain(student[curr_student].student,
@@ -333,8 +437,16 @@ class Study(object):
 
         self.save_results(student, expert_times, expert_labels)
         ##TODO evaluate the students after getting labels
-        self.evaluate_student(student['learner1'], sequence, self.data, test)
-        self.evaluate_student(student['learner2'], sequence, self.data, test)
+        # self.evaluate_student(student['learner1'], student['learner1'].train.index, pool, test, order=False)
+        # self.evaluate_student(student['learner2'], student['learner1'].train.index, pool, test, order=True)
+
+        t = bunch.Bunch(index=expert_labels['learner1']['index'], target=expert_labels['learner1']['labels'])
+        self.evaluate_student(student['learner1'].student.model, t, original_sequence, pool, test,
+                              name=student['learner1'].name, order=False)
+
+        t = bunch.Bunch(index=expert_labels['learner2']['index'], target=expert_labels['learner1']['labels'])
+        self.evaluate_student(student['learner2'].student.model, t, original_sequence, pool, test,
+                              name=student['learner1'].name, order=True)
 
     def al_cycle(self, student, expert):
         query = None
