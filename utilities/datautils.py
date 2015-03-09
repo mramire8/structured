@@ -332,7 +332,9 @@ def load_arxiv(path, category=None, subset="all", shuffle=True, rnd=2356, percen
     from sklearn.cross_validation import ShuffleSplit
 
     categories = {'ml': ['cs.AI', 'cs.LG'],
-                  'physics': ['physics.comp-ph', 'physics.data-an']}
+                  'physics': ['physics.comp-ph', 'physics.data-an'],
+                  'db': ['cs.DB', 'cs.IR']
+                 }
 
     cat = None
     if category is not None:
