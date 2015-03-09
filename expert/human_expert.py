@@ -12,13 +12,15 @@ class HumanExpert(BaseExpert):
 
     def label(self, data, y=None):
         import time
+        import textwrap
         labels = []
         times = []
         for doc in data:
+            print_text = doc.strip()
             print
             print ("-"*40)
             print
-            print '\033[94m' + doc.strip() +'\033[0m'
+            print '\033[94m' + textwrap.fill(print_text, width=70) +'\033[0m'
             t0 = time.time()
             valid = False
             answer = -1
