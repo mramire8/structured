@@ -404,7 +404,7 @@ class TrainStudy(object):
         # print "Oracle CM"
         # print "\n".join(["{}\t{}".format(*r) for r in step_oracle])
         for t in query.target:
-            target_name=""
+            target_name = ""
             if names is not None:
                 target_name = names[t]
             print "True label: %s = %s" % (target_name, t)
