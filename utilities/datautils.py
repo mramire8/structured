@@ -125,6 +125,7 @@ def minimum_size(data, min_size=10):
         if len(data[part].data) != len(data[part].target):
             raise Exception("There is something wrong with the data")
         # filtered = [(x, y) for x, y in zip(data[part].data, data[part].target) if len(x.strip()) >= 10]
+        data[part].data = np.array([doc.replace("<br />"," ") for doc in data[part].data], dtype=object)
         filtered = np.array([len(x.strip()) for x in data[part].data])
         data[part].data = data[part].data[filtered >= min_size]
         data[part].target = data[part].target[filtered >= min_size]
