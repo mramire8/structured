@@ -126,7 +126,6 @@ class Study(object):
 
             else:
                 # train student
-
                 non_neutral = np.array(train.target[:i]) < 2
                 train_idx = np.append(np.array(sequence[:self.bootstrap_size]), np.array(train.index[:i])[non_neutral])
                 train_target = np.append(data.target[sequence[:self.bootstrap_size]], np.array(train.target[:i])[non_neutral])
@@ -363,6 +362,7 @@ class Study(object):
     def start(self):
         import copy
         from collections import deque
+        from time import time
 
         self.set_options(self.config)
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
@@ -389,6 +389,9 @@ class Study(object):
         expert_times = {'learner1':[], 'learner2':[]}
         expert_labels = {'learner1': self.start_record(), 'learner2': self.start_record()}
         original_sequence = []
+
+
+        t0 = time()
         while combined_budget < (2 * self.budget):
             if i == 0:
                 ## Bootstrap
@@ -446,6 +449,9 @@ class Study(object):
                     combined_budget = student['learner1'].budget + student['learner2'].budget
 
             i += 1
+
+        t1 = time()
+        print "\nTotal annotation time: %.3f secs (%.3f mins)" % ((t1-t0), (t1-t0)/60)
 
         self.save_results(student, expert_times, expert_labels)
         ##TODO evaluate the students after getting labels
