@@ -106,10 +106,11 @@ class Study(object):
 
         if order:
             # train = student.train
-            order1 = np.argsort(sequence[self.bootstrap_size:])
-            order2 = np.argsort(train.index)
-            new_target = np.array(train.target)[order1][order2]
-            train.target = new_target
+            # order1 = np.argsort(sequence[self.bootstrap_size:])
+            # order2 = np.argsort(train.index)
+            # new_target = np.array(train.target)[order1][order2]
+            new_target = [train.target[train.index.index(i)] for i in sequence[self.bootstrap_size:]]
+            train.target = np.array(new_target, dtype=int)
             train.index = sequence
 
         x = range(self.bootstrap_size, len(sequence)+1, 1)
