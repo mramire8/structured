@@ -8,11 +8,11 @@ class StemTokenizer(object):
     def __init__(self):
         from nltk import RegexpTokenizer
         from nltk.stem import PorterStemmer
+
         self.wnl = PorterStemmer()
         self.mytokenizer = RegexpTokenizer('\\b\\w+\\b')
 
     def __call__(self, doc):
-
         return [self.wnl.stem(t) for t in self.mytokenizer.tokenize(doc)]
 
 
@@ -90,8 +90,9 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None, keep
         raise Exception("We are not ready for train test aviation data yet")
     elif subset == "all":
         data = load_files(path, encoding="latin1", load_content=True,
-                                   random_state=rnd)
+                          random_state=rnd)
         data.data = np.array([keep_header_subject(text, keep_subject=keep_suject) for text in data.data], dtype=object)
+        data.data = np.array([remove_greeting(text) for text in data.data], dtype=object)
     else:
         raise ValueError(
             "subset can only be 'train', 'test' or 'all', got '%s'" % subset)
@@ -119,13 +120,43 @@ def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None, keep
     return data
 
 
-def minimum_size(data, min_size=10):
+def remove_greeting(text):
+    """
+    Given an email like text return the text without the greeting part, e.g., "Hi Darling, ..."
+    :param text:
+    :return:
+    """
+    import re
+    if len(text) <= 0:
+        return text
 
+    parts = text.split("\n")
+    first = parts[0] if len(parts[0]) >0 else parts[1]
+
+    res = re.search("(\W|^)(Hi|hello|hey|good morning|good evening|good afternoon|thanks|thankyou|thank you)(\W|$)", first, re.IGNORECASE)
+
+    first_tk = first.strip().split()
+
+    result = text
+
+    if (res is not None) or (len(first_tk) <=3 ):
+        ## if there is a salutation i
+        if len(first_tk) > 0 and not first_tk[-1][-1].isalnum() :
+            # if the last character  of the last token is a special characters
+            result =  "\n".join(parts[1:])
+        elif (res is not None):
+            # if we found greeting words in the  first line
+            result = "\n".join(parts[1:])
+
+    return result
+
+
+def minimum_size(data, min_size=10):
     for part in data.keys():
         if len(data[part].data) != len(data[part].target):
             raise Exception("There is something wrong with the data")
         # filtered = [(x, y) for x, y in zip(data[part].data, data[part].target) if len(x.strip()) >= 10]
-        data[part].data = np.array([doc.replace("<br />"," ") for doc in data[part].data], dtype=object)
+        data[part].data = np.array([doc.replace("<br />", " ") for doc in data[part].data], dtype=object)
         filtered = np.array([len(x.strip()) for x in data[part].data])
         data[part].data = data[part].data[filtered >= min_size]
         data[part].target = data[part].target[filtered >= min_size]
@@ -133,7 +164,6 @@ def minimum_size(data, min_size=10):
 
 
 def minimum_size_sraa(data, min_size=10):
-
     if len(data.data) != len(data.target):
         raise Exception("There is something wrong with the data")
     filtered = np.array([len(x.strip()) for x in data.data])
@@ -150,14 +180,14 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
     cat = None
     if category is not None:
         cat = categories[category]
-        
+
     data = bunch.Bunch()
-    data.train = fetch_20newsgroups(subset='train', categories=cat, remove=('headers','footers', 'quotes'),
+    data.train = fetch_20newsgroups(subset='train', categories=cat, remove=('headers', 'footers', 'quotes'),
                                     shuffle=shuffle, random_state=rnd)
 
     # data.train.data = np.array([keep_header_subject(text) for text in data.train.data], dtype=object)
     data.train.data = np.array(data.train.data, dtype=object)
-    data.test = fetch_20newsgroups(subset='test', categories=cat, remove=('headers','footers', 'quotes'),
+    data.test = fetch_20newsgroups(subset='test', categories=cat, remove=('headers', 'footers', 'quotes'),
                                    shuffle=shuffle, random_state=rnd)
 
     # data.test.data = np.array([keep_header_subject(text) for text in data.test.data], dtype=object)
@@ -180,6 +210,7 @@ def load_20newsgroups(category=None, shuffle=True, rnd=1):
 
 def preprocess(string, lowercase, collapse_urls, collapse_mentions):
     import re
+
     if not string:
         return ""
     if lowercase:
@@ -214,7 +245,7 @@ def user_to_doc(users, *args):
 def bunch_users(class1, class2, lowercase, collapse_urls, collapse_mentions, rnd, class_name=None):
     labels = None
     if labels is None:
-        labels = [0,1]
+        labels = [0, 1]
 
     user_id, user_names, timeline = user_to_doc(class1, lowercase, collapse_urls, collapse_mentions)
     user_id2, user_names2, timeline2 = user_to_doc(class2, lowercase, collapse_urls, collapse_mentions)
@@ -244,6 +275,7 @@ def bunch_users(class1, class2, lowercase, collapse_urls, collapse_mentions, rnd
 
 def get_date(date_str):
     import datetime
+
     return datetime.datetime.strptime(date_str.strip('"'), "%a %b %d %H:%M:%S +0000 %Y")
 
 
@@ -262,31 +294,32 @@ def convert_tweet_2_data(data_path, rnd):
     gds = [g for g in good if get_date(g[0]['created_at']).year > 2013]
     bts = [b for b in bots if get_date(b[0]['created_at']).year > 2013]
 
-    data = bunch_users(gds,bts, True, True, True, rnd, class_name=['good', 'bots'])
+    data = bunch_users(gds, bts, True, True, True, rnd, class_name=['good', 'bots'])
 
     return data
 
 
 def get_tweets_file(path):
     import json
+
     f = open(path)
 
     i = 0
     users = []
-    data=[]
+    data = []
     last = 0
     for line in f:
         data = line.split("]][[")
         last = len(data)
 
-    for i,tweets in enumerate(data):
-            if i == 0:
-                t = json.loads(tweets[1:] + "]")
-            elif i == (last-1):
-                t = json.loads("["+tweets[:-1])
-            else:
-                t = json.loads("["+tweets+"]")
-            users.append(t)
+    for i, tweets in enumerate(data):
+        if i == 0:
+            t = json.loads(tweets[1:] + "]")
+        elif i == (last - 1):
+            t = json.loads("[" + tweets[:-1])
+        else:
+            t = json.loads("[" + tweets + "]")
+        users.append(t)
 
     return users
 
@@ -319,7 +352,8 @@ def load_twitter(path, shuffle=True, rnd=1):
 
     return data
 
-#ARXIV_HOME = 'C:/Users/mramire8/Documents/Datasets/arxiv'
+
+# ARXIV_HOME = 'C:/Users/mramire8/Documents/Datasets/arxiv'
 def load_arxiv(path, category=None, subset="all", shuffle=True, rnd=2356, percent=.5):
     """
     load text files from Aviation-auto dataset from folders to memory. It will return a 25-75 percent train test split
@@ -335,7 +369,7 @@ def load_arxiv(path, category=None, subset="all", shuffle=True, rnd=2356, percen
     categories = {'ml': ['cs.AI', 'cs.LG'],
                   'physics': ['physics.comp-ph', 'physics.data-an'],
                   'db': ['cs.DB', 'cs.IR']
-                 }
+    }
 
     cat = None
     if category is not None:
