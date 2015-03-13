@@ -120,8 +120,8 @@ class Study(object):
         results['auc'] = defaultdict(lambda: [])
         results['ora_accu'] = defaultdict(lambda: [])
 
-        for i, c in zip(x, cost):
-            if i == 50:
+        for i, c in enumerate(cost):
+            if i == 0:
                 train_idx = sequence[:i]
                 train_target = data.target[train_idx]
 
