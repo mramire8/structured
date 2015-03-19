@@ -39,6 +39,7 @@ class Study(object):
         self.verbose = verbose
         self.learner1 = None
         self.learner2 = None
+        self.prefix = ""
 
     def get_sequence(self, n, subsample):
         ''' Get a sequence of document for the study
@@ -122,7 +123,7 @@ class Study(object):
 
         for i, c in enumerate(cost):
             if i == 0:
-                train_idx = sequence[:i]
+                train_idx = sequence[:c]
                 train_target = data.target[train_idx]
 
             else:
@@ -130,6 +131,8 @@ class Study(object):
                 non_neutral = np.array(train.target[:i]) < 2
                 train_idx = np.append(np.array(sequence[:self.bootstrap_size]), np.array(train.index[:i])[non_neutral])
                 train_target = np.append(data.target[sequence[:self.bootstrap_size]], np.array(train.target[:i])[non_neutral])
+
+            # print np.unique(train_target),  len(train_target)
 
             student_clf.fit(data.bow[train_idx], train_target)
 
@@ -152,7 +155,7 @@ class Study(object):
         self.save_evaluation_results(results, name=name)
 
     def save_evaluation_results(self, results, name='student'):
-        output_name = self.output + "/" + self.dataname + "-" + name + "-curve-"
+        output_name = self.output + "/" + self.dataname + "-" + name + "-curve" + self.prefix + "-"
 
         accu = results['accuracy']
         xaxis = results['accuracy'].keys()
@@ -230,15 +233,17 @@ class Study(object):
 
     def _save_student_labels(self, student, filename='student'):
         f = open(filename, "w")
-        f.write("doc_index\ttrue_label\texp_label\n")
+        f.write("doc_index\ttrue_label\texp_label\tdoc_text\n")
         for i, doc_i in enumerate(student.train.index):
-            f.write("{}\t{}\t{}\n".format(doc_i, student.pool.target[doc_i], student.train.target[i]))
+            doc_text = student.pool.data[doc_i]
+            doc_text = doc_text.encode('latin1').replace('\n',' ').replace('\t',' ')
+            f.write("{}\t{}\t{}\t{}\n".format(doc_i, student.pool.target[doc_i], student.train.target[i], doc_text))
         f.close()
 
     def _save_oracle_labels(self, expert, filename='expert'):
 
         f = open(filename, "w")
-        f.write("doc_index\ttrue_label\texp_label\tsnippet\tdoc_text\n")
+        f.write("doc_index\ttrue_label\texp_label\tannotation_time\tsnippet\tdoc_text\n")
         exp = expert
         n = len(exp['index'])
         for i in range(n):
@@ -290,6 +295,7 @@ class Study(object):
         self.step = config['stepsize']
         self.output = config['outputdir']
         self.bootstrap_size = config['bootstrap']
+        self.prefix = config['fileprefix']
 
     def update_pool(self, pool, query, labels, train):
         ## remove from remaining
