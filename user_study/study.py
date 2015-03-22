@@ -58,7 +58,8 @@ class Study(object):
         if type_exp['type'] == 'human':
             from expert.human_expert import HumanExpert
 
-            names = ", ".join(["{}={}".format(a, b) for a, b in enumerate(target_names + ['neutral'])]) + " ? > "
+            names = ", ".join(["{}={}".format(a, b) for a, b in enumerate(target_names + ['neutral'])]) \
+                    + " pause=p" + " > "
             expert = HumanExpert(None, names)
         else:
             raise Exception("Oops, cannot handle an %s expert" % type_exp)
@@ -175,7 +176,7 @@ class Study(object):
 
         self._print_file2(xaxis, y, output_name + "cm.txt")
 
-    def record_labels(self, expert_labels, query, labels, time=None):
+    def record_labels(self, expert_labels, query, labels, time=None, pause=None):
         '''
         Save data labels from the expert
         :return:
@@ -186,6 +187,7 @@ class Study(object):
         expert_labels['time'].append(time)
         expert_labels['text'].extend(query.text)
         expert_labels['snip'].extend(query.snippet)
+        expert_labels['paused'].append(pause)
         return expert_labels
 
     def start_record(self):
@@ -196,6 +198,7 @@ class Study(object):
         r['time'] = []
         r['text'] = []
         r['snip'] = []
+        r['paused'] = []
         return r
 
     def retrain(self, learner, pool, train):
@@ -243,14 +246,14 @@ class Study(object):
     def _save_oracle_labels(self, expert, filename='expert'):
 
         f = open(filename, "w")
-        f.write("doc_index\ttrue_label\texp_label\tannotation_time\tsnippet\tdoc_text\n")
+        f.write("doc_index\ttrue_label\texp_label\tannotation_time\tpausedp_time\tsnippet\tdoc_text\n")
         exp = expert
         n = len(exp['index'])
         for i in range(n):
             txt = exp['text'][i].encode('latin1').replace('\n',' ').replace('\t',' ')
             snip = exp['snip'][i].encode('latin1').replace('\n',' ').replace('\t',' ')
-            f.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(exp['index'][i], exp['true'][i], exp['labels'][i],
-                                                      exp['time'][i], snip, txt))
+            f.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(exp['index'][i], exp['true'][i], exp['labels'][i],
+                                                      exp['time'][i], exp['paused'][i], snip, txt))
         f.close()
 
     def _print_file(self, x, y, file_name):
@@ -439,6 +442,9 @@ class Study(object):
                 # print len(student['learner1'].pool.remaining), len(student['learner2'].pool.remaining)
 
                 if query is not None and labels is not None:
+
+                    # progress
+                    print "\n%.1f %% completed" % (100. * combined_budget / (2 * self.budget))
                     # re-train the learner
                     student[curr_student].student = self.retrain(student[curr_student].student,
                                                                  student[curr_student].pool, student[curr_student].train)
@@ -448,7 +454,8 @@ class Study(object):
 
                     # record labels
                     expert_labels[curr_student] = self.record_labels(expert_labels[curr_student], query, labels,
-                                                                     time=expert.get_annotation_time())
+                                                                     time=expert.get_annotation_time(),
+                                                                     pause=expert.get_pause())
 
                     if self.debug:
                         self._debug(student[curr_student], expert, query, step_oracle)

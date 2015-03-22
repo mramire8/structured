@@ -9,12 +9,15 @@ class HumanExpert(BaseExpert):
         self.elapsed_time = -1
         self.num_classes = 3  # binary + neutral
         self.prompt = prompt
+        self.paused = False
+        self.pauses_left = 3
 
     def label(self, data, y=None):
         import time
         import textwrap
         labels = []
         times = []
+        self.paused = False
         for doc in data:
             print_text = doc.strip()
             print
@@ -35,7 +38,18 @@ class HumanExpert(BaseExpert):
                         valid = True
                         labels.append(answer)
                 except ValueError:
-                   valid = False
+                    valid = False
+                    if self.pauses_left > 0:
+                        if answer == 'p' or answer == 'P':
+                            self.pauses_left -= 1
+                            print "%s pauses left" % self.pauses_left
+                            print "\n*** PAUSE ***\n"
+                            pause = raw_input('\033[92mpress <return> to continue...\033[0m')
+                            print ("-"*40)
+                            print
+                            print '\033[94m' + textwrap.fill(print_text, width=70) +'\033[0m'
+                            t0 = time.time()
+                            self.paused = True
             self.elapsed_time = time.time() - t0
             times.append(self.elapsed_time)
         return labels
@@ -45,3 +59,6 @@ class HumanExpert(BaseExpert):
 
     def get_annotation_time(self):
         return self.elapsed_time
+
+    def get_pause(self):
+        return self.paused
