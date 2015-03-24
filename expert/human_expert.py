@@ -10,7 +10,7 @@ class HumanExpert(BaseExpert):
         self.num_classes = 3  # binary + neutral
         self.prompt = prompt
         self.paused = False
-        self.pauses_left = 3
+        self.pauses_left = 10
 
     def label(self, data, y=None):
         import time

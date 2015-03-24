@@ -400,6 +400,7 @@ class Study(object):
         expert_labels = {'learner1': self.start_record(), 'learner2': self.start_record()}
         original_sequence = []
 
+        raw_input("\n*** Press <return> to start ***")
 
         t0 = time()
         while combined_budget < (2 * self.budget):
