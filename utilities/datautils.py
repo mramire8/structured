@@ -73,6 +73,63 @@ def load_imdb(path, subset="all", shuffle=True, rnd=2356):
     return data
 
 
+def process_tweets(data_users):
+    import json
+    data = []
+    for user in data_users:
+        timeline = user.split("\n")
+        for tweet in timeline:
+            t = json.loads(tweet)
+            data.append(t['text'])
+    return "######".join(t for t in data)
+
+
+def load_gender_twitter(path, subset="all", shuffle=True, rnd=2356, percent=.5):
+    """
+    load text files from IMDB movie reviews from folders to memory
+    :param path: path of the root directory of the data
+    :param subset: what data will be loaded, train or test or all
+    :param shuffle:
+    :param rnd: ranom seed value
+    :param vct: vectorizer
+    :return: :raise ValueError:
+    """
+    from sklearn.cross_validation import ShuffleSplit
+    data = bunch.Bunch()
+
+    if subset in ('train', 'test'):
+        pass
+    elif subset == "all":
+        data = load_files(path, encoding="latin1", load_content=True, random_state=rnd)
+        data.data = np.array([process_tweets(d) for d in data.data], dtype=object)
+    else:
+        raise ValueError(
+            "subset can only be 'train', 'test' or 'all', got '%s'" % subset)
+
+    indices = ShuffleSplit(len(data.data), n_iter=1, test_size=percent, random_state=rnd)
+    for train_ind, test_ind in indices:
+        data = bunch.Bunch(train=bunch.Bunch(data=data.data[train_ind], target=data.target[train_ind],
+                                             filenames=data.filenames[train_ind], target_names=data.target_names),
+                           test=bunch.Bunch(data=data.data[test_ind], target=data.target[test_ind],
+                                            filenames=data.filenames[test_ind], target_names=data.target_names))
+
+    if shuffle:
+        random_state = np.random.RandomState(rnd)
+        indices = np.arange(data.train.target.shape[0])
+        random_state.shuffle(indices)
+        data.train.filenames = data.train.filenames[indices]
+        data.train.target = data.train.target[indices]
+        # Use an object array to shuffle: avoids memory copy
+        data_lst = np.array(data.train.data, dtype=object)
+        data_lst = data_lst[indices]
+        data.train.data = data_lst
+        data.test.data = np.array(data.test.data, dtype=object)
+
+    data = minimum_size(data)
+
+    return data
+
+
 def load_aviation(path, subset="all", shuffle=True, rnd=2356, percent=None, keep_suject=False):
     """
     load text files from Aviation-auto dataset from folders to memory. It will return a 25-75 percent train test split
@@ -427,6 +484,9 @@ def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5
     elif "twitter" in name:
         ########## 20 news groups ######
         data = load_twitter(path, shuffle=shuffle, rnd=rnd)
+    elif "gender" in name:
+        ########## 20 news groups ######
+        data = load_gender_twitter(path, shuffle=shuffle, rnd=rnd, percent=percent)
     else:
         raise Exception("We do not know {} dataset".format(name.upper()))
 
