@@ -479,14 +479,14 @@ def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5
         ########## 20 news groups ######
         data = load_20newsgroups(category=categories, shuffle=shuffle, rnd=rnd)
     elif "arxiv" in name:
-        ########## 20 news groups ######
+        ##########  arxiv dataset ######
         data = load_arxiv(path, category=categories, subset='all', shuffle=shuffle, rnd=rnd, percent=percent)
-    elif "twitter" in name:
-        ########## 20 news groups ######
-        data = load_twitter(path, shuffle=shuffle, rnd=rnd)
-    elif "gender" in name:
-        ########## 20 news groups ######
+    elif "twitter-gender" in name:
+        ########## gender from twitter timeline ######
         data = load_gender_twitter(path, shuffle=shuffle, rnd=rnd, percent=percent)
+    elif "twitter" in name:
+        ########## twitter dataset bot vs human ######
+        data = load_twitter(path, shuffle=shuffle, rnd=rnd)
     else:
         raise Exception("We do not know {} dataset".format(name.upper()))
 
