@@ -465,13 +465,17 @@ def load_arxiv(path, category=None, subset="all", shuffle=True, rnd=2356, percen
     return data
 
 
-def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5, keep_subject=False):
+def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5, keep_subject=False, labels=None):
     data = bunch.Bunch()
 
-    if "imdb" in name:
+    if "imdb" == name:
         ########## IMDB MOVIE REVIEWS ###########
-        # data = bunch.Bunch(load_imdb(name, shuffle=True, rnd=2356, vct=vct, min_size=min_size, fix_k=fixk, raw=raw))  # should brind data as is
-        data = load_imdb(path, shuffle=shuffle, rnd=rnd)  # should brind data as is
+
+        data = load_imdb(path, shuffle=shuffle, rnd=rnd)  # should bring data as is
+    elif "amt-imdb" in name:
+        ########## IMDB MOVIE REVIEWS ###########
+        from amt_datautils import load_amt_imdb
+        data = load_amt_imdb(path, shuffle=shuffle, rnd=rnd, amt_labels=labels)  # should bring with training labels as the amt annotations
     elif "sraa" in name:
         ########## sraa dataset ######
         data = load_aviation(path, shuffle=shuffle, rnd=rnd, percent=percent, keep_suject=keep_subject)
