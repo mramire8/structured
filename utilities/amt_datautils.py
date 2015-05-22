@@ -6,9 +6,7 @@ from collections import defaultdict
 
 
 def load_data_results(filename):
-
     import csv
-
 
     results = defaultdict(lambda: [])
     header = []
@@ -16,7 +14,7 @@ def load_data_results(filename):
         sents = csv.DictReader(csvfile, delimiter=',', quotechar='"')
         for row in sents:
 
-            for k,v in row.items():
+            for k, v in row.items():
                 results[k].append(v)
 
     return results
@@ -45,15 +43,14 @@ def load_amt(file_name):
     doc_text = [" THIS_IS_A_SEPARATOR ".join(s for s in docs)]
     sents = []
     sentid = amt['ID']
-    sentlabels =amt['SENT_TARGET']
-
+    sentlabels = amt['SENT_TARGET']
 
     return docs, ids, labels, sents, sentid, sentlabels
+
 
 def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
     import numpy as np
     from collections import defaultdict
-
 
     data = utils.load_imdb(path, shuffle=shuffle, rnd=rnd)  # should brind data as is
 
@@ -78,6 +75,4 @@ def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
 
     # data = minimum_size(data, min_size=100)
 
-
     return data
-

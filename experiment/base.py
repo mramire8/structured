@@ -243,6 +243,8 @@ class Experiment(object):
             if iteration == 0:
                 # bootstrap
                 train = self.bootstrap(pool, bootstrap, train)
+                for q, t in zip(train.index, train.target):
+                    pool.remaining.remove(q)
                 learner = self.retrain(learner, pool, train)
             else:
                 # select query and query labels

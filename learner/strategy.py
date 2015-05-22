@@ -199,7 +199,6 @@ class StructuredLearner(ActiveLearner):
     def set_calibration_method(self, cal_name):
         self._do_calibration = getattr(self, cal_name)
 
-
     def set_sent_tokenizer(self, tokenizer):
         self.sent_tokenizer = tokenizer
 
