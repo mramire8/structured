@@ -147,6 +147,10 @@ def get_tokenizer(tk_name):
         from twit_token import TwitterSentenceTokenizer
         sent_detector = TwitterSentenceTokenizer()
         return sent_detector
+    elif tk_name == 'amt-sent' or tk_name == 'amt':
+        from amt_tokenizer import AMTSentenceTokenizer
+        sent_detector = AMTSentenceTokenizer()
+        return sent_detector
     else:
         raise Exception("Unknown sentence tokenizer")
 

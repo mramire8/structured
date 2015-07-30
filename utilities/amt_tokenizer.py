@@ -1,6 +1,6 @@
 __author__ = 'maru'
 
-class SentenceTokenizer(object):
+class AMTSentenceTokenizer(object):
     def __init__(self):
         pass
 

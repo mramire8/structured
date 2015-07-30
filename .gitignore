@@ -56,3 +56,8 @@ target/
 # Project Pycharm
 .idea/
 
+# Result files
+*.txt
+
+# Misc
+.DS_Store
