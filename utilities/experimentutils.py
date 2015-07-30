@@ -132,11 +132,22 @@ def get_expert(config):
     elif config['type'] == 'truereluctant':  # reluctant based on p probability
         p = config['neutral_p']
         expert = TrueReluctantExpert(None, p)
+    elif config['type']== 'amtexpert':
+        from expert.amt_expert import AMTExpert
+        expert = AMTExpert(None)
     else:
         raise Exception("We don't know {} expert".format(config['type']))
 
     return expert
 
+def get_bootstrap(config):
+    bt = config['bootstrap']
+    if 'bootstrap_type' in config:
+        mt = config['bootstrap_type']
+    else:
+        mt = None
+
+    return bt, mt
 
 def get_tokenizer(tk_name):
     if tk_name == 'nltk':

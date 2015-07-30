@@ -40,7 +40,7 @@ def load_amt(path, file_name):
 
     # document and sentence id
     order = np.argsort(amt['ID'])
-    print np.array(amt['ID'])[order]
+    # print np.array(amt['ID'])[order]
 
     for i in order:
         ordered[amt['DOCID'][i]][amt['SENTID'][i][1:]] = amt['TEXT'][i]
@@ -52,6 +52,7 @@ def load_amt(path, file_name):
 
     # Convert into documents with separator
     doc_text = ["THIS_IS_A_SEPARATOR".join(s) for s in docs]
+    doc_target = []
     sents = docs
 
     sentid = amt['ID']
@@ -65,10 +66,13 @@ def load_amt(path, file_name):
             sloc = "{}S{}".format(docid,s)
             sid = sent_target['ID'].index(sloc)
             doc_sent.append(sent_target['TARGET'][sid])
+        # Record the true target of the document, only the last sentence true label is needed.
+        doc_target.append(amt['TARGET'][sid])
+
         sentlabels.append(doc_sent)
         # sentlabels.append([ordered[docid][txt] for txt in sorted(ordered[docid], key=lambda x: int(x))])
 
-    return docs, ids, labels, sents, sentid, sentlabels
+    return docs, ids, doc_target, sents, sentid, sentlabels
 
 
 def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
@@ -91,6 +95,7 @@ def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
 
     data.train.data = ["THIS_IS_A_SEPARATOR".join(d) for d in docs]
     # data.train.target = labels
+    data.train.doctarget = np.array(labels, dtype=object)
     data.train.target = np.array(sentlabels, dtype=object)
     data.train.docid = ids
     # get the document text
@@ -101,6 +106,7 @@ def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
         random_state.shuffle(indices)
         # data.train.filenames = data.train.filenames[indices]
         data.train.target = data.train.target[indices]
+        data.train.doctarget = data.train.doctarget[indices]
         # Use an object array to shuffle: avoids memory copy
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]

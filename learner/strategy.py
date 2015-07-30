@@ -45,6 +45,40 @@ class BootstrapFromEach(Learner):
 
         return chosen
 
+class AMTBootstrapFromEach(Learner):
+    def __init__(self, model, seed=None):
+        super(AMTBootstrapFromEach, self).__init__(model, seed=seed)
+        self.rnd_state = np.random.RandomState(self.seed)
+
+    def bootstrap(self, pool, step=2, shuffle=False):
+        """
+        bootstrap by selecting step/2 instances per class, in a binary dataset
+        :param pool: bunch containing the available data
+            pool contains:
+                target: true labels of the examples
+                ramaining: list of available examples in the pool to use
+        :param step: how many examples to select in total
+        :param shuffle: shuffle the data before selecting or not (important for sequential methods)
+        :return: list of indices of selected examples
+        """
+        from collections import defaultdict
+
+        step = int(step / 2)
+        data = defaultdict(lambda: [])
+
+        for i in pool.remaining:
+            data[pool.target[i][0]].append(i)
+
+        chosen = []
+        for label in data.keys():
+            candidates = data[label]
+            if shuffle:
+                indices = self.rnd_state.permutation(len(candidates))
+            else:
+                indices = range(len(candidates))
+            chosen.extend([candidates[index] for index in indices[:step]])
+
+        return chosen
 
 class ActiveLearner(Learner):
     """ActiveLearner class that defines a simple utility based pool sampling strategy"""

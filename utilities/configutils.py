@@ -15,6 +15,10 @@ def get_section_names(config):
 def has_section(config, section):
     return section in get_section_names(config)
 
+def has_option(config, section, option):
+    sec = get_section_options(config, section)
+
+    return option in sec
 
 def get_section_options(config, section):
     dict1 = {}

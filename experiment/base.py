@@ -12,7 +12,7 @@ import utilities.configutils as cfgutil
 from sklearn import cross_validation
 import numpy as np
 from collections import defaultdict
-from learner.strategy import BootstrapFromEach
+from learner.strategy import BootstrapFromEach, AMTBootstrapFromEach
 from sklearn.datasets import base as bunch
 
 
@@ -116,7 +116,8 @@ class Experiment(object):
         self.prefix = config['fileprefix']
         self.output = config['outputdir']
         self.seed = config['seed']
-        self.bootstrap_size = config['bootstrap']
+        # self.bootstrap_size = config['bootstrap']
+        self.bootstrap_size, self.bootstrap_method = exputil.get_bootstrap(config)
         self.costfn = exputil.get_costfn(config['costfunction'])
 
         # data related config
@@ -167,9 +168,13 @@ class Experiment(object):
                                                               cfg['snippet'], cfg['calibration'], post)
         return name
 
-    def bootstrap(self, pool, bt, train):
+    def bootstrap(self, pool, bt, train, bt_method=None):
         # get a bootstrap
-        bt_obj = BootstrapFromEach(None, seed=self.seed)
+        if bt_method is None:
+            bt_obj = BootstrapFromEach(None, seed=self.seed)
+        elif bt_method == 'amt-tfe':
+            bt_obj = AMTBootstrapFromEach(None, seed=self.seed)
+
         initial = bt_obj.bootstrap(pool, step=bt, shuffle=False)
 
         # update initial training data
@@ -242,7 +247,7 @@ class Experiment(object):
         while current_cost <= budget and iteration <= self.max_iteration and len(pool.remaining) > self.step:
             if iteration == 0:
                 # bootstrap
-                train = self.bootstrap(pool, bootstrap, train)
+                train = self.bootstrap(pool, bootstrap, train, bt_method=self.bootstrap_method)
                 for q, t in zip(train.index, train.target):
                     pool.remaining.remove(q)
                 learner = self.retrain(learner, pool, train)
