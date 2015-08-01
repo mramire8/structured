@@ -180,6 +180,8 @@ class Experiment(object):
         # update initial training data
         train.index = initial
         train.target = pool.target[initial].tolist()
+        if bt_method == 'amt-tfe':
+            train.target = pool.doctarget[initial].tolist()
         return train
 
     def update_cost(self, current_cost, query):
@@ -265,7 +267,7 @@ class Experiment(object):
 
                 # evaluate
                 step_results = self.evaluate(learner, test)
-                step_oracle = self.evaluate_oracle(query, labels, labels=np.unique(pool.target))
+                step_oracle = self.evaluate_oracle(query, labels, labels=[0,1])
 
                 # record results
                 results = self.update_run_results(results, step_results, step_oracle, current_cost)

@@ -67,7 +67,7 @@ class AMTBootstrapFromEach(Learner):
         data = defaultdict(lambda: [])
 
         for i in pool.remaining:
-            data[pool.target[i][0]].append(i)
+            data[pool.doctarget[i]].append(i)
 
         chosen = []
         for label in data.keys():
@@ -124,10 +124,31 @@ class StructuredLearner(ActiveLearner):
                 sents = [s for s in sentences if len(s.strip()) > limit]
             elif limit == 0 or limit is None:
                 sents = [s for s in sentences]
+
             sent_train.extend(sents)  # at the sentences separately as individual documents
-            labels.extend([t] * len(sents))  # Give the label of the document to all its sentences
+
+            # labels.extend([t] * len(sents))  # Give the label of the document to all its sentences
+            labels.extend(StructuredLearner._get_sentence_labels(t,len(sents)))  # Give the label of the document to all its sentences
 
         return sent_train, labels  # , dump
+
+    @staticmethod
+    def _get_sentence_labels(t, n):
+        '''
+        For a set of sentences get the corresponding labels
+        :param t:
+        :param n:
+        :return:
+        '''
+        if isinstance(t, list):
+            # the sentences are labeled individually
+            if len(t) == n:
+                return t
+            else:
+                raise Exception("Error: number of labels should be %s" % n)
+        else:
+            # only the document label is available, propagate to sentences
+            return [t] * n
 
     def get_name(self):
         return "{}{}".format(self.utility.__name__, self.snippet_utility.__name__)
@@ -161,15 +182,26 @@ class StructuredLearner(ActiveLearner):
     def _compute_utility(self, X):
         return self.utility(X)
 
-    def _query(self, pool, snippets, indices):
+    def _query(self, pool, snippets, indices, snippet_index):
         q = bunch.Bunch()
         q.data = pool.bow[indices]
         q.bow = self.vct.transform(snippets)
         q.text = pool.data[indices]
-        q.target = pool.target[indices]
+        # q.target = pool.target[indices]
+        q.target = self._get_target(pool.target[indices], snippet_index)
         q.snippet = snippets
         q.index = indices
         return q
+
+    def _get_target(self, targets, indices):
+        sent_target = []
+        for t, i in zip(targets, indices):
+            if isinstance(t, list):
+                sent_target.append(t[i])
+            else:
+                sent_target.append(t)
+
+        return np.array(sent_target)
 
     def _do_calibration(self, scores, y_pred):
         """
@@ -304,7 +336,7 @@ class StructuredLearner(ActiveLearner):
         sent_max = x_scores.max(axis=1)  ## within each document thesentence with the max score
         sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
         sent_text = np.array(sent_text, dtype=object)
-        return sent_max, sent_text
+        return sent_max, sent_text, sent_index
 
     def __str__(self):
         return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model,
@@ -333,14 +365,14 @@ class Sequential(StructuredLearner):
         if isinstance(utility, float):
             utility = np.array([utility])
         #compute best snippet
-        snippet, snippet_text = self._compute_snippet(x_text)
+        snippet, snippet_text, sent_index = self._compute_snippet(x_text)
 
         #select x, then s
         seq = utility
         order = np.argsort(seq)[::-1]
         index = [subpool[i] for i in order[:step]]
 
-        query = self._query(pool, snippet_text[order][:step], index)
+        query = self._query(pool, snippet_text[order][:step], index, sent_index[order][:step])
         return query
 
 
@@ -365,7 +397,7 @@ class Joint(StructuredLearner):
         utility = self._compute_utility(x)
 
         #comput best snippet
-        snippet, snippet_text = self._compute_snippet(x_text)
+        snippet, snippet_text, sent_index = self._compute_snippet(x_text)
 
         #multiply
         joint = utility * snippet
@@ -373,5 +405,5 @@ class Joint(StructuredLearner):
         index = [subpool[i] for i in order[:step]]
 
         #build the query
-        query = self._query(pool, snippet_text[order][:step], index)
+        query = self._query(pool, snippet_text[order][:step], index, sent_index[order][:step])
         return query

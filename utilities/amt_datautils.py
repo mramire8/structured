@@ -34,7 +34,7 @@ def load_amt(path, file_name):
     ids = np.unique(amt['DOCID'])
 
     # Document target
-    labels = np.array(amt['TARGET'])
+    labels = np.array(amt['TARGET'], dtype=int)
 
     ordered = defaultdict(lambda: {})
 
@@ -65,7 +65,7 @@ def load_amt(path, file_name):
         for s in ordered[docid].keys():
             sloc = "{}S{}".format(docid,s)
             sid = sent_target['ID'].index(sloc)
-            doc_sent.append(sent_target['TARGET'][sid])
+            doc_sent.append(int(sent_target['TARGET'][sid]))
         # Record the true target of the document, only the last sentence true label is needed.
         doc_target.append(amt['TARGET'][sid])
 
@@ -95,7 +95,7 @@ def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
 
     data.train.data = ["THIS_IS_A_SEPARATOR".join(d) for d in docs]
     # data.train.target = labels
-    data.train.doctarget = np.array(labels, dtype=object)
+    data.train.doctarget = np.array(labels, dtype=int)
     data.train.target = np.array(sentlabels, dtype=object)
     data.train.docid = ids
     # get the document text
@@ -107,6 +107,7 @@ def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
         # data.train.filenames = data.train.filenames[indices]
         data.train.target = data.train.target[indices]
         data.train.doctarget = data.train.doctarget[indices]
+        data.train.docid = data.train.docid[indices]
         # Use an object array to shuffle: avoids memory copy
         data_lst = np.array(data.train.data, dtype=object)
         data_lst = data_lst[indices]
