@@ -181,7 +181,8 @@ class Experiment(object):
         train.index = initial
         train.target = pool.target[initial].tolist()
         if bt_method == 'amt-tfe':
-            train.target = pool.doctarget[initial].tolist()
+            # train.target = pool.doctarget[initial].tolist()
+            train.target = pool.alltarget[initial].tolist()
         return train
 
     def update_cost(self, current_cost, query):

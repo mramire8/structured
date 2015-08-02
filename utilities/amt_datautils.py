@@ -85,13 +85,14 @@ def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
     :return:
     '''
     import numpy as np
-    from collections import defaultdict
 
     # should brind data as is, we will use vct and test data from here
-
     data = utils.load_imdb(path, shuffle=shuffle, rnd=rnd)
 
     docs, ids, labels, sents, sentid, sentlabels = load_amt(path, amt_labels)
+
+    data.train.alldata = np.array(data.train.data)
+    data.train.alllabels = np.array(data.train.target)
 
     data.train.data = ["THIS_IS_A_SEPARATOR".join(d) for d in docs]
     # data.train.target = labels

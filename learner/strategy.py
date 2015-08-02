@@ -67,6 +67,36 @@ class AMTBootstrapFromEach(Learner):
         data = defaultdict(lambda: [])
 
         for i in pool.remaining:
+            data[pool.alltarget[i]].append(i)
+
+        chosen = []
+        for label in data.keys():
+            candidates = data[label]
+            if shuffle:
+                indices = self.rnd_state.permutation(len(candidates))
+            else:
+                indices = range(len(candidates))
+            chosen.extend([candidates[index] for index in indices[:step]])
+
+        return chosen
+
+    def bootstrap_v0(self, pool, step=2, shuffle=False):
+        """
+        bootstrap by selecting step/2 instances per class, in a binary dataset
+        :param pool: bunch containing the available data
+            pool contains:
+                target: true labels of the examples
+                ramaining: list of available examples in the pool to use
+        :param step: how many examples to select in total
+        :param shuffle: shuffle the data before selecting or not (important for sequential methods)
+        :return: list of indices of selected examples
+        """
+        from collections import defaultdict
+
+        step = int(step / 2)
+        data = defaultdict(lambda: [])
+
+        for i in pool.remaining:
             data[pool.doctarget[i]].append(i)
 
         chosen = []
