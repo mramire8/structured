@@ -472,7 +472,7 @@ def load_dataset(name, path, categories=None, rnd=2356, shuffle=True, percent=.5
         ########## IMDB MOVIE REVIEWS ###########
 
         data = load_imdb(path, shuffle=shuffle, rnd=rnd)  # should bring data as is
-    elif "amt-imdb" in name:
+    elif "amt_imdb" in name:
         ########## IMDB MOVIE REVIEWS ###########
         from amt_datautils import load_amt_imdb
         data = load_amt_imdb(path, shuffle=shuffle, rnd=rnd, amt_labels=labels)  # should bring with training labels as the amt annotations
