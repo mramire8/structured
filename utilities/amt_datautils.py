@@ -92,7 +92,7 @@ def load_amt_imdb(path, shuffle=True, rnd=2356, amt_labels=None):
     docs, ids, labels, sents, sentid, sentlabels = load_amt(path, amt_labels)
 
     data.train.alldata = np.array(data.train.data)
-    data.train.alllabels = np.array(data.train.target)
+    data.train.alltarget = np.array(data.train.target)
 
     data.train.data = ["THIS_IS_A_SEPARATOR".join(d) for d in docs]
     # data.train.target = labels
