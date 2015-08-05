@@ -250,6 +250,8 @@ class Experiment(object):
 
         ## keep track of current training
         train = bunch.Bunch(index=[], target=[])
+        query = []
+        labels = []
 
         while current_cost <= budget and iteration <= self.max_iteration and len(pool.remaining) > self.step:
             if iteration == 0:
@@ -349,18 +351,32 @@ class AMT_Experiment(Experiment):
 
     """Main experiment class to run according to configuration"""
     def __init__(self, dataname, config, verbose=False, debug=False):
-        super(AMT_Experiment).__init__(dataname,config, verbose=verbose, debug=debug)
+        super(AMT_Experiment, self).__init__(dataname, config, verbose=verbose, debug=debug)
         self.bt_bow = []
 
     def retrain(self, learner, pool, train):
+        from numpy import vstack
 
+        # Document text from the  bootstrap
+        text1 = pool.alldata[train.index[:self.bootstrap_size]]
         if len(self.bt_bow) == 0:
-            self.bt_bow = self.vct.transform(pool.alldata[train.index[:self.bootstrap_size]])
+            # get the bow of the data for bootstrap from the original documents, different set than amt
+            self.bt_bow = self.vct.transform(text1)
 
-        X = pool.bow[train.index]
+        # Add the AMT portion
+        x2 = pool.bow[train.index[self.bootstrap_size:]]
+        # X = pool.bow[train.index]
+        if x2.shape[0] > 0:
+            X = vstack((self.bt_bow, x2))
+        else:
+            X = self.bt_bow
+
+        # Actual target, includes bootstrap and other
         y = train.target
-        ## get training document text
-        text = pool.data[train.index]
+
+        # Get training document text
+        text = list(text1)
+        text.extend(pool.data[train.index[self.bootstrap_size:]])
 
         return learner.fit(X, y, doc_text=text)
 
