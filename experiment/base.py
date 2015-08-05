@@ -259,7 +259,7 @@ class Experiment(object):
                 # for q, t in zip(train.index, train.target):
                 #     pool.remaining.remove(q)
 
-                learner = self.retrain(learner, pool, train)
+                # learner = self.retrain(learner, pool, train)
             else:
                 # select query and query labels
                 query = learner.next(pool, self.step)
@@ -269,8 +269,8 @@ class Experiment(object):
                 pool, train = self.update_pool(pool, query, labels, train)
                 current_cost = self.update_cost(current_cost, query)
 
-                # re-train the learner
-                learner = self.retrain(learner, pool, train)
+            # re-train the learner
+            learner = self.retrain(learner, pool, train)
 
             # evaluate
             step_results = self.evaluate(learner, test)
@@ -343,3 +343,38 @@ class Experiment(object):
             print "{}\t{}\t{}\t{}\t{}\t{}\t{}".format(query.index[i], query.target[i], st_prob[i][0], st_prob[i][1],
                                                       ex_prob[i][0], ex_prob[i][1], query.snippet[i].encode('utf-8'))
             # print
+
+
+class AMT_Experiment(Experiment):
+
+    """Main experiment class to run according to configuration"""
+    def __init__(self, dataname, config, verbose=False, debug=False):
+        super(AMT_Experiment).__init__(dataname,config, verbose=verbose, debug=debug)
+        self.bt_bow = []
+
+    def retrain(self, learner, pool, train):
+
+        if len(self.bt_bow) == 0:
+            self.bt_bow = self.vct.transform(pool.alldata[train.index[:self.bootstrap_size]])
+
+        X = pool.bow[train.index]
+        y = train.target
+        ## get training document text
+        text = pool.data[train.index]
+
+        return learner.fit(X, y, doc_text=text)
+
+    # def main_loop(self, learner, expert, budget, bootstrap, pool, test):
+    #     pass
+
+    def bootstrap(self, pool, bt, train, bt_method=None):
+        # get a bootstrap
+        bt_obj = AMTBootstrapFromEach(None, seed=self.seed)
+
+        initial = bt_obj.bootstrap(pool, step=bt, shuffle=False)
+
+        # update initial training data
+        train.index = initial
+        train.target = pool.alltarget[initial].tolist()
+
+        return train
