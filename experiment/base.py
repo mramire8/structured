@@ -255,8 +255,10 @@ class Experiment(object):
             if iteration == 0:
                 # bootstrap
                 train = self.bootstrap(pool, bootstrap, train, bt_method=self.bootstrap_method)
-                for q, t in zip(train.index, train.target):
-                    pool.remaining.remove(q)
+
+                # for q, t in zip(train.index, train.target):
+                #     pool.remaining.remove(q)
+
                 learner = self.retrain(learner, pool, train)
             else:
                 # select query and query labels
@@ -270,14 +272,14 @@ class Experiment(object):
                 # re-train the learner
                 learner = self.retrain(learner, pool, train)
 
-                # evaluate
-                step_results = self.evaluate(learner, test)
-                step_oracle = self.evaluate_oracle(query, labels, labels=[0,1])
+            # evaluate
+            step_results = self.evaluate(learner, test)
+            step_oracle = self.evaluate_oracle(query, labels, labels=[0,1])
 
-                # record results
-                results = self.update_run_results(results, step_results, step_oracle, current_cost)
-                if self.debug:
-                    self._debug(learner, expert, query)
+            # record results
+            results = self.update_run_results(results, step_results, step_oracle, current_cost)
+            if self.debug:
+                self._debug(learner, expert, query)
             iteration += 1
         return results
 

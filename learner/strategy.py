@@ -62,11 +62,15 @@ class AMTBootstrapFromEach(Learner):
         :return: list of indices of selected examples
         """
         from collections import defaultdict
+        from collections import deque
 
         step = int(step / 2)
         data = defaultdict(lambda: [])
 
-        for i in pool.remaining:
+        # for i in pool.remaining:
+        #     data[pool.alltarget[i]].append(i)
+        remaining = deque(range(len(pool.alltarget)))
+        for i in remaining:
             data[pool.alltarget[i]].append(i)
 
         chosen = []
