@@ -261,7 +261,7 @@ class Experiment(object):
                 # for q, t in zip(train.index, train.target):
                 #     pool.remaining.remove(q)
 
-                # learner = self.retrain(learner, pool, train)
+                learner = self.retrain(learner, pool, train)
             else:
                 # select query and query labels
                 query = learner.next(pool, self.step)
@@ -271,17 +271,19 @@ class Experiment(object):
                 pool, train = self.update_pool(pool, query, labels, train)
                 current_cost = self.update_cost(current_cost, query)
 
-            # re-train the learner
-            learner = self.retrain(learner, pool, train)
+                # re-train the learner
+                learner = self.retrain(learner, pool, train)
 
-            # evaluate
-            step_results = self.evaluate(learner, test)
-            step_oracle = self.evaluate_oracle(query, labels, labels=[0,1])
+                # evaluate student
+                step_results = self.evaluate(learner, test)
 
-            # record results
-            results = self.update_run_results(results, step_results, step_oracle, current_cost)
-            if self.debug:
-                self._debug(learner, expert, query)
+                # evalutate oracle
+                step_oracle = self.evaluate_oracle(query, labels, labels=[0,1])
+
+                # record results
+                results = self.update_run_results(results, step_results, step_oracle, current_cost)
+                if self.debug:
+                    self._debug(learner, expert, query)
             iteration += 1
         return results
 
@@ -366,6 +368,7 @@ class AMT_Experiment(Experiment):
         # Add the AMT portion
         x2 = pool.bow[train.index[self.bootstrap_size:]]
         # X = pool.bow[train.index]
+        X = []
         if x2.shape[0] > 0:
             X = vstack((self.bt_bow, x2))
         else:
