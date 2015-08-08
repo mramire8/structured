@@ -200,21 +200,31 @@ class Experiment(object):
         return {'auc': auc, 'accuracy': accu}
 
     def evaluate_oracle(self, query, predictions, labels=None):
-        t = np.array([[x,y] for x,y in zip(query.target, predictions) if y is not None])
         cm = np.zeros((2,2))
-        if len(t)> 0:
-            cm = metrics.confusion_matrix(t[:,0], t[:,1], labels=labels)
+        try:
+            t = np.array([[x,y] for x,y in zip(query.target, predictions) if y is not None])
+            if len(t)> 0:
+                cm = metrics.confusion_matrix(t[:,0], t[:,1], labels=labels)
+        except AttributeError:
+            pass
         return cm
 
     def update_run_results(self, results, step, oracle, iteration):
         results['accuracy'][iteration].append(step['accuracy'])
         results['auc'][iteration].append(step['auc'])
-        results['ora_accu'][iteration].append(oracle)
+        try:
+            results['ora_accu'][iteration].append(oracle)
+        except Exception:
+            pass
+
         if self.verbose:
             if iteration == self.step:
                 print "IT\tACCU\tAUC\tT0\tF1\tF0\tT1"
             print "{0}\t{1:.3f}\t{2:.3f}\t".format(iteration, step['accuracy'], step['auc']),
-            print "\t".join(["{0:.3f}".format(x) for x in np.reshape(oracle, 4)])
+            try:
+                print "\t".join(["{0:.3f}".format(x) for x in np.reshape(oracle, 4)])
+            except Exception:
+                pass
         return results
 
     def update_pool(self, pool, query, labels, train):
@@ -274,17 +284,20 @@ class Experiment(object):
                 # re-train the learner
                 learner = self.retrain(learner, pool, train)
 
-                # evaluate student
-                step_results = self.evaluate(learner, test)
-
-                # evalutate oracle
-                step_oracle = self.evaluate_oracle(query, labels, labels=[0,1])
-
-                # record results
-                results = self.update_run_results(results, step_results, step_oracle, current_cost)
                 if self.debug:
                     self._debug(learner, expert, query)
+
+            # evaluate student
+            step_results = self.evaluate(learner, test)
+
+            # evalutate oracle
+            step_oracle = self.evaluate_oracle(query, labels, labels=[0,1])
+
+            # record results
+            results = self.update_run_results(results, step_results, step_oracle, current_cost)
+
             iteration += 1
+
         return results
 
     def _start_results(self):
@@ -357,11 +370,12 @@ class AMT_Experiment(Experiment):
         self.bt_bow = []
 
     def retrain(self, learner, pool, train):
-        from numpy import vstack
+        from scipy.sparse import vstack
 
         # Document text from the  bootstrap
         text1 = pool.alldata[train.index[:self.bootstrap_size]]
-        if len(self.bt_bow) == 0:
+        # if len(self.bt_bow) == 0:
+        if isinstance(self.bt_bow, list):
             # get the bow of the data for bootstrap from the original documents, different set than amt
             self.bt_bow = self.vct.transform(text1)
 
@@ -370,7 +384,8 @@ class AMT_Experiment(Experiment):
         # X = pool.bow[train.index]
         X = []
         if x2.shape[0] > 0:
-            X = vstack((self.bt_bow, x2))
+            # X = vstack((self.bt_bow, x2))
+            X = vstack([self.bt_bow, x2], format='csr')
         else:
             X = self.bt_bow
 
