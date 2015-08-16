@@ -15,10 +15,15 @@ def get_section_names(config):
 def has_section(config, section):
     return section in get_section_names(config)
 
+
 def has_option(config, section, option):
-    sec = get_section_options(config, section)
+    if has_section(config, section):
+        sec = get_section_options(config, section)
+    else:
+        sec = []
 
     return option in sec
+
 
 def get_section_options(config, section):
     dict1 = {}

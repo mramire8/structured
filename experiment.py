@@ -6,7 +6,7 @@ ap = argparse.ArgumentParser(description=__doc__,
                              formatter_class=argparse.RawTextHelpFormatter)
 ap.add_argument('--train',
                 metavar='TRAIN',
-                default="amt_imdb",
+                default="20news",
                 choices=['imdb', 'amt_imdb', 'sraa', '20news', 'twitter','arxiv', 'twitter-gender'],
                 help='training data (libSVM format)')
 
@@ -22,7 +22,7 @@ ap.add_argument('--debug',
 ap.add_argument('--config',
                 metavar='CONFIG_FILE',
                 type=str,
-                default='./default.cfg',
+                default='./default2.cfg',
                 help='Experiment configuration file')
 
 

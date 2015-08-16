@@ -218,8 +218,8 @@ class Experiment(object):
             pass
 
         if self.verbose:
-            if iteration == self.step:
-                print "IT\tACCU\tAUC\tT0\tF1\tF0\tT1"
+            if iteration == 0:
+                print "\nIT\tACCU\tAUC\tT0\tF1\tF0\tT1"
             print "{0}\t{1:.3f}\t{2:.3f}\t".format(iteration, step['accuracy'], step['auc']),
             try:
                 print "\t".join(["{0:.3f}".format(x) for x in np.reshape(oracle, 4)])
