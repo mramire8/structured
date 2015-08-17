@@ -34,6 +34,7 @@ class Experiment(object):
         self.folds = None
         self.split = None
         self.costfn = None
+        self.cost_model = None
         self.budget = None
         self.max_iteration = None
         self.step = None
@@ -119,6 +120,8 @@ class Experiment(object):
         # self.bootstrap_size = config['bootstrap']
         self.bootstrap_size, self.bootstrap_method = exputil.get_bootstrap(config)
         self.costfn = exputil.get_costfn(config['costfunction'])
+        if 'cost_model' in config.keys():
+            self.cost_model = config['cost_model']
 
         # data related config
         config = cfgutil.get_section_options(config_obj, 'data')
@@ -190,7 +193,8 @@ class Experiment(object):
         return train
 
     def update_cost(self, current_cost, query):
-        return current_cost + self.costfn(query.bow)
+
+        return current_cost + self.costfn(query, cost_model=self.cost_model)
 
     def evaluate(self, learner, test):
         prediction = learner.predict(test.bow)
@@ -323,6 +327,46 @@ class Experiment(object):
 
         return cost, perf, std, n
 
+    def _extrapolate(self, t_perf, t_cost, cost_25, step_size=10):
+    # def extrapolate_trials(tr, cost_25=8.2, step_size=10):
+        '''
+        Extrapolate the x-axis information per trial, to create an average later.
+        Trials is a list of each trial performance, where each trial has the cost and
+        the performance. The x-axis is extrapolated based on cost of 25-word segments.
+        The cost of each iteration is cost of 25-words times number of queries. C(25) * step.
+        '''
+        from collections import defaultdict
+        cost_delta = cost_25 * step_size  # Cost of 25 words based on user study
+
+        extrapolated = defaultdict(lambda: [])
+        perf = []
+        ext_cost = []
+
+        for cost, data in zip(t_cost, t_perf):
+
+            trial_data = np.array(data)
+
+            i = 0
+            current_c = np.ceil(cost[0] / cost_delta) * cost_delta
+
+            while i < trial_data.shape[0] - 1:  # while reaching end of rows
+                a = trial_data[i]
+                a1 = trial_data[i + 1]
+                c = cost[i]
+                c1 = cost[i+1]
+                if c <= current_c <= c1:
+                    m = (a1 - a) / (c1 - c) * (current_c - c)
+                    z = m + a
+                    extrapolated[current_c].append(z)
+                    ext_cost.append(current_c)
+                    perf.append(z)
+
+                    current_c += cost_delta
+                if c1 < current_c:
+                    i += 1
+
+        return extrapolated
+
     def report_results(self, results):
         output_name = self.output + "/" + self.get_name()
         if not os.path.exists(self.output):
@@ -334,11 +378,14 @@ class Experiment(object):
         cost = []
         for tr in results:
             c, p, s, n = self._get_iteration(tr['accuracy'])
+            p = self._extrapolate(p,c,self.cost_model[25],self.trials)
             accu.append(p)
             c, p, s, n = self._get_iteration(tr['auc'])
+            p = self._extrapolate(p,c,self.cost_model[25],self.trials)
             auc.append(p)
             cost.append(c)
             c, p, s, n = self._get_cm_iteration(tr['ora_accu'])
+            p = self._extrapolate(p,c,self.cost_model[25],self.trials)
             ora.append(p)
 
         p = np.mean(accu, axis=0)

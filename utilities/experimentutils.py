@@ -169,6 +169,9 @@ def get_tokenizer(tk_name):
 def get_costfn(fn_name):
     if fn_name == 'unit':
         return unit_cost
+    elif fn_name == 'variable_cost':
+        from costutils import intra_cost
+        return intra_cost
     else:
         raise Exception("Unknown cost function")
 
