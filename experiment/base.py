@@ -132,7 +132,10 @@ class Experiment(object):
 
         #data related config
         config = cfgutil.get_section_options(config_obj, 'expert')
-        self.sent_tokenizer = exputil.get_tokenizer(config['sent_tokenizer'])
+        args = {}
+        if 'snip_size' in config:
+            args.update({'snip_size':config['snip_size']})
+        self.sent_tokenizer = exputil.get_tokenizer(config['sent_tokenizer'], **args)
 
     def start(self):
         print self.get_name()

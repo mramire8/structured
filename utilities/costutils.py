@@ -11,7 +11,7 @@ def intra_cost(query, cost_model=None):
     c = 0
     x_text = query.snippet
     if x_text is not None:
-        c = [_cost_intrapolated(len(x), cost_model.values(), cost_model.keys()) for x in x_text]
+        c = [_cost_intrapolated(len(x.split()), cost_model.values(), cost_model.keys()) for x in x_text]
 
     return sum(c)
 

@@ -1,6 +1,9 @@
 from sklearn.datasets import base as bunch
 from learner.strategy import Joint, Sequential
 import numpy as np
+from nltk import RegexpTokenizer
+from nltk.stem import PorterStemmer
+
 
 
 def sample_data(data, train_idx, test_idx):
@@ -26,6 +29,13 @@ def sample_data(data, train_idx, test_idx):
         sample.train.remaining = []
     return sample.train, sample.test
 
+def stemming(doc):
+
+    wnl = PorterStemmer()
+    mytokenizer = RegexpTokenizer('\\b\\w+\\b')
+
+    return [wnl.stem(t) for t in mytokenizer.tokenize(doc)]
+
 
 def get_vectorizer(config):
     limit = config['limit']
@@ -42,10 +52,9 @@ def get_vectorizer(config):
         return TfidfVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=False, ngram_range=(1, 1),
                                vocabulary=vocab)
     elif vectorizer == 'bow':
-        from datautils import StemTokenizer
+        # from datautils import StemTokenizer
         return CountVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=True, ngram_range=(1, 3),
-                      token_pattern='\\b\\w+\\b', tokenizer=StemTokenizer())
-
+                      token_pattern='\\b\\w+\\b', tokenizer=stemming)
     else:
         return None
 
@@ -149,7 +158,7 @@ def get_bootstrap(config):
 
     return bt, mt
 
-def get_tokenizer(tk_name):
+def get_tokenizer(tk_name, **kwargs):
     if tk_name == 'nltk':
         import nltk
         sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
@@ -161,6 +170,13 @@ def get_tokenizer(tk_name):
     elif tk_name == 'amt-sent' or tk_name == 'amt':
         from amt_tokenizer import AMTSentenceTokenizer
         sent_detector = AMTSentenceTokenizer()
+        return sent_detector
+    elif tk_name == 'snippet':
+        from snippet_tokenizer import SnippetTokenizer
+        k = 1
+        if 'snip_size' in kwargs:
+            k = kwargs['snip_size']
+        sent_detector = SnippetTokenizer(k=k)
         return sent_detector
     else:
         raise Exception("Unknown sentence tokenizer")
