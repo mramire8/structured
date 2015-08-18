@@ -52,9 +52,9 @@ def get_vectorizer(config):
         return TfidfVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=False, ngram_range=(1, 1),
                                vocabulary=vocab)
     elif vectorizer == 'bow':
-        # from datautils import StemTokenizer
+        from datautils import StemTokenizer
         return CountVectorizer(encoding='ISO-8859-1', min_df=5, max_df=1.0, binary=True, ngram_range=(1, 3),
-                      token_pattern='\\b\\w+\\b', tokenizer=stemming)
+                      token_pattern='\\b\\w+\\b', tokenizer=StemTokenizer())
     else:
         return None
 
@@ -173,10 +173,17 @@ def get_tokenizer(tk_name, **kwargs):
         return sent_detector
     elif tk_name == 'snippet':
         from snippet_tokenizer import SnippetTokenizer
-        k = 1
+        k = (1,1)
         if 'snip_size' in kwargs:
             k = kwargs['snip_size']
         sent_detector = SnippetTokenizer(k=k)
+        return sent_detector
+    elif tk_name == 'first1snippet':
+        from snippet_tokenizer import First1SnippetTokenizer
+        k = (1,1)
+        if 'snip_size' in kwargs:
+            k = kwargs['snip_size']
+        sent_detector = First1SnippetTokenizer(k=k)
         return sent_detector
     else:
         raise Exception("Unknown sentence tokenizer")

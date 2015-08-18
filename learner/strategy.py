@@ -216,10 +216,13 @@ class StructuredLearner(ActiveLearner):
     def _compute_utility(self, X):
         return self.utility(X)
 
-    def _query(self, pool, snippets, indices, snippet_index):
+    def _query(self, pool, snippets, indices, snippet_index, bow=None):
         q = bunch.Bunch()
         q.data = pool.bow[indices]
-        q.bow = self.vct.transform(snippets)
+        if bow is not None:
+            q.bow = bow
+        else:
+            q.bow = self.vct.transform(snippets)
         q.text = pool.data[indices]
         # q.target = pool.target[indices]
         q.target = self._get_target(pool.target[indices], snippet_index)
@@ -370,7 +373,7 @@ class StructuredLearner(ActiveLearner):
         sent_max = x_scores.max(axis=1)  ## within each document thesentence with the max score
         sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
         sent_text = np.array(sent_text, dtype=object)
-        return sent_max, sent_text, sent_index
+        return sent_max, sent_text, sent_index, x_sent_bow
 
     def __str__(self):
         return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model,
@@ -431,7 +434,7 @@ class Joint(StructuredLearner):
         utility = self._compute_utility(x)
 
         #comput best snippet
-        snippet, snippet_text, sent_index = self._compute_snippet(x_text)
+        snippet, snippet_text, sent_index, sent_bow = self._compute_snippet(x_text)
 
         #multiply
         joint = utility * snippet
@@ -439,5 +442,5 @@ class Joint(StructuredLearner):
         index = [subpool[i] for i in order[:step]]
 
         #build the query
-        query = self._query(pool, snippet_text[order][:step], index, sent_index[order][:step])
+        query = self._query(pool, snippet_text[order][:step], index, sent_index[order][:step], bow=sent_bow[order][:step])
         return query

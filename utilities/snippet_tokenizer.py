@@ -21,7 +21,6 @@ class SnippetTokenizer(object):
     def set_snippet_size(self, k):
         self.k = k
 
-
     def __str__(self):
         return self.__class__.__name__
 
@@ -39,3 +38,20 @@ class SnippetTokenizer(object):
         d_sent = self.sent_tk.tokenize_sents([doc])
 
         return self.get_sentences_k(d_sent[0], k)
+
+
+class First1SnippetTokenizer(SnippetTokenizer):
+
+    def __init__(self, k=(1,1)):
+        super(First1SnippetTokenizer,self).__init__(k)
+
+    def get_sentences_k(self, sentences, k):
+        import itertools as it
+
+        all_sents = []
+        for i in range(k[0],k[1]+1):
+            pairs = it.combinations(sentences[:30], i)
+            for p in pairs:
+                all_sents.append(self.separator.join(p))
+                break
+        return all_sents
