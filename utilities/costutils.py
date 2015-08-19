@@ -9,9 +9,12 @@ def intra_cost(query, cost_model=None):
     if cost_model is None:
         raise ValueError("Cost model is not available.")
     c = 0
+    kvals = sorted(cost_model.keys())
+    cost = [cost_model[k] for k in kvals]
+
     x_text = query.snippet
     if x_text is not None:
-        c = [_cost_intrapolated(len(x.split()), cost_model.values(), cost_model.keys()) for x in x_text]
+        c = [_cost_intrapolated(len(x.split()), cost, kvals) for x in x_text]
 
     return sum(c)
 

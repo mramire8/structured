@@ -1,7 +1,7 @@
 import numpy as np
 from base import Learner
 from sklearn.datasets import base as bunch
-
+from scipy.sparse import vstack
 
 class RandomSampling(Learner):
     """docstring for RandomSampling"""
@@ -216,11 +216,17 @@ class StructuredLearner(ActiveLearner):
     def _compute_utility(self, X):
         return self.utility(X)
 
+    def to_matrix(self, snip_bows):
+        data= snip_bows[0]
+        for s in snip_bows[1:]:
+            data = vstack([data, s], format='csr')
+        return data
+
     def _query(self, pool, snippets, indices, snippet_index, bow=None):
         q = bunch.Bunch()
         q.data = pool.bow[indices]
         if bow is not None:
-            q.bow = bow
+            q.bow = self.to_matrix(bow)
         else:
             q.bow = self.vct.transform(snippets)
         q.text = pool.data[indices]
@@ -373,7 +379,8 @@ class StructuredLearner(ActiveLearner):
         sent_max = x_scores.max(axis=1)  ## within each document thesentence with the max score
         sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
         sent_text = np.array(sent_text, dtype=object)
-        return sent_max, sent_text, sent_index, x_sent_bow
+        sent_bow = np.array(x_sent_bow, dtype=object)
+        return sent_max, sent_text, sent_index, sent_bow
 
     def __str__(self):
         return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model,
@@ -402,14 +409,14 @@ class Sequential(StructuredLearner):
         if isinstance(utility, float):
             utility = np.array([utility])
         #compute best snippet
-        snippet, snippet_text, sent_index = self._compute_snippet(x_text)
+        snippet, snippet_text, sent_index, sent_bow = self._compute_snippet(x_text)
 
         #select x, then s
         seq = utility
         order = np.argsort(seq)[::-1]
         index = [subpool[i] for i in order[:step]]
 
-        query = self._query(pool, snippet_text[order][:step], index, sent_index[order][:step])
+        query = self._query(pool, snippet_text[order][:step], index, sent_index[order][:step], bow=sent_bow[order][:step])
         return query
 
 

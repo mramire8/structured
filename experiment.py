@@ -35,7 +35,7 @@ def main():
     experiment = Experiment(args.train, config, verbose=args.verbose, debug=args.debug)
     experiment.start()
     t1 = time()
-    print "Elapsed time: %.3f secs (%.3f mins)" % ((t1-t0), (t1-t0)/60)
+    print "\nElapsed time: %.3f secs (%.3f mins)" % ((t1-t0), (t1-t0)/60)
 
 if __name__ == "__main__":
     main()

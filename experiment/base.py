@@ -14,7 +14,7 @@ import numpy as np
 from collections import defaultdict
 from learner.strategy import BootstrapFromEach, AMTBootstrapFromEach
 from sklearn.datasets import base as bunch
-
+from time import time
 
 class Experiment(object):
     """Main experiment class to run according to configuration"""
@@ -137,12 +137,18 @@ class Experiment(object):
             args.update({'snip_size':config['snip_size']})
         self.sent_tokenizer = exputil.get_tokenizer(config['sent_tokenizer'], **args)
 
+    def print_lap(self, msg, t0):
+        t1 = time()
+        print "%s %.3f secs (%.3f mins)" % (msg, (t1-t0), (t1-t0)/60)
+
     def start(self):
         print self.get_name()
         trial = []
         self._setup_options(self.config)
+        t0 = time()
         self.data = datautil.load_dataset(self.dataname, self.data_path, categories=self.data_cat, rnd=self.seed,
                                           shuffle=True, percent=self.split, keep_subject=True)
+        self.print_lap("Loaded", t0)
         # self.data = self.vectorize(self.data)
         cv = self.cross_validation_data(self.data, folds=self.folds, trials=self.trials, split=self.split)
         t = 0
@@ -150,7 +156,7 @@ class Experiment(object):
             # get the data of this cv iteration
             # train, test = exputil.sample_data(self.data, train_index, test_index)
             train, test = self._sample_data(self.data, train_index, test_index)
-
+            self.print_lap("Sampled", t0)
             # get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
                                           vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t * 10 + 10))
@@ -161,6 +167,7 @@ class Experiment(object):
 
             # do active learning
             results = self.main_loop(learner, expert, self.budget, self.bootstrap_size, train, test)
+            self.print_lap("Trial %s" % t, t0)
 
             # save the results
             trial.append(results)

@@ -47,11 +47,10 @@ class First1SnippetTokenizer(SnippetTokenizer):
 
     def get_sentences_k(self, sentences, k):
         import itertools as it
-
+        n = len(sentences[:30])
         all_sents = []
-        for i in range(k[0],k[1]+1):
-            pairs = it.combinations(sentences[:30], i)
-            for p in pairs:
-                all_sents.append(self.separator.join(p))
-                break
+        pairs = it.combinations(sentences[:30], min(k[1], n))
+        for p in pairs:
+            all_sents.append(self.separator.join(p))
+            break
         return all_sents
