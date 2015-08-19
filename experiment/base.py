@@ -156,7 +156,7 @@ class Experiment(object):
             # get the data of this cv iteration
             # train, test = exputil.sample_data(self.data, train_index, test_index)
             train, test = self._sample_data(self.data, train_index, test_index)
-            self.print_lap("Sampled", t0)
+            self.print_lap("\nSampled", t0)
             # get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
                                           vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t * 10 + 10))
@@ -167,7 +167,7 @@ class Experiment(object):
 
             # do active learning
             results = self.main_loop(learner, expert, self.budget, self.bootstrap_size, train, test)
-            self.print_lap("Trial %s" % t, t0)
+            self.print_lap("\nTrial %s" % t, t0)
 
             # save the results
             trial.append(results)
@@ -234,7 +234,7 @@ class Experiment(object):
         if self.verbose:
             if iteration == 0:
                 print "\nIT\tACCU\tAUC\tT0\tF1\tF0\tT1"
-            print "{0}\t{1:.3f}\t{2:.3f}\t".format(iteration, step['accuracy'], step['auc']),
+            print "{0:0.2f}\t{1:.3f}\t{2:.3f}\t".format(iteration, step['accuracy'], step['auc']),
             try:
                 print "\t".join(["{0:.3f}".format(x) for x in np.reshape(oracle, 4)])
             except Exception:
@@ -345,37 +345,35 @@ class Experiment(object):
         the performance. The x-axis is extrapolated based on cost of 25-word segments.
         The cost of each iteration is cost of 25-words times number of queries. C(25) * step.
         '''
-        from collections import defaultdict
         cost_delta = cost_25 * step_size  # Cost of 25 words based on user study
 
-        extrapolated = defaultdict(lambda: [])
-        perf = []
+        ext_perf = []
         ext_cost = []
 
-        for cost, data in zip(t_cost, t_perf):
+        cost, data  = t_cost, t_perf
 
-            trial_data = np.array(data)
+        trial_data = np.array(data)
 
-            i = 0
-            current_c = np.ceil(cost[0] / cost_delta) * cost_delta
+        i = 0
+        current_c = np.ceil(cost[0] / cost_delta) * cost_delta
 
-            while i < trial_data.shape[0] - 1:  # while reaching end of rows
-                a = trial_data[i]
-                a1 = trial_data[i + 1]
-                c = cost[i]
-                c1 = cost[i+1]
-                if c <= current_c <= c1:
-                    m = (a1 - a) / (c1 - c) * (current_c - c)
-                    z = m + a
-                    extrapolated[current_c].append(z)
-                    ext_cost.append(current_c)
-                    perf.append(z)
+        while i < trial_data.shape[0] - 1:  # while reaching end of rows
+            a = trial_data[i]
+            a1 = trial_data[i + 1]
+            c = cost[i]
+            c1 = cost[i+1]
+            if c <= current_c <= c1:
+                m = (a1 - a) / (c1 - c) * (current_c - c)
+                z = m + a
 
-                    current_c += cost_delta
-                if c1 < current_c:
-                    i += 1
+                ext_cost.append(current_c)
+                ext_perf.append(z)
 
-        return extrapolated
+                current_c += cost_delta
+            if c1 < current_c:
+                i += 1
+
+        return ext_cost, ext_perf
 
     def report_results(self, results):
         output_name = self.output + "/" + self.get_name()
@@ -388,25 +386,26 @@ class Experiment(object):
         cost = []
         for tr in results:
             c, p, s, n = self._get_iteration(tr['accuracy'])
-            p = self._extrapolate(p,c,self.cost_model[25],self.trials)
+            c, p = self._extrapolate(p,c,self.cost_model[25],self.trials)
             accu.append(p)
-            c, p, s, n = self._get_iteration(tr['auc'])
-            p = self._extrapolate(p,c,self.cost_model[25],self.trials)
-            auc.append(p)
             cost.append(c)
+            c, p, s, n = self._get_iteration(tr['auc'])
+            c, p = self._extrapolate(p,c,self.cost_model[25],self.trials)
+            auc.append(p)
             c, p, s, n = self._get_cm_iteration(tr['ora_accu'])
-            p = self._extrapolate(p,c,self.cost_model[25],self.trials)
+            c, p = self._extrapolate(p,c,self.cost_model[25],self.trials)
             ora.append(p)
+        min_x = min([len(m) for m in cost])
 
-        p = np.mean(accu, axis=0)
-        c = np.mean(cost, axis=0)
-        s = np.std(accu, axis=0)
+        p = np.mean([a[:min_x] for a in accu], axis=0)
+        c = np.mean([a[:min_x] for a in cost], axis=0)
+        s = np.std([a[:min_x] for a in accu], axis=0)
         exputil.print_file(c, p, s, open(output_name + "-accu.txt", "w"))
-        p = np.mean(auc, axis=0)
-        s = np.std(auc, axis=0)
+        p = np.mean([a[:min_x] for a in auc], axis=0)
+        s = np.std([a[:min_x] for a in auc], axis=0)
         exputil.print_file(c, p, s, open(output_name + "-auc.txt", "w"))
-        p = np.mean(ora, axis=0)
-        s = np.std(ora, axis=0)
+        p = np.mean([a[:min_x] for a in ora], axis=0)
+        s = np.std([a[:min_x] for a in ora], axis=0)
         exputil.print_cm_file(c, p, s, open(output_name + "-oracle-cm.txt", "w"))
 
     def _debug(self, learner, expert, query):

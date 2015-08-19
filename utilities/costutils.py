@@ -30,6 +30,9 @@ def _cost_intrapolated(x, cost, kvalues):
     x1 = kvalues[lbbinx] if lbbinx >=0 else 0
     x2 = kvalues[binx]
 
+    if (x2-x1) == 0:
+        return cost[0]
+
     m = (y2-y1) / (x2-x1)
     b = y2 - m * x2
 
