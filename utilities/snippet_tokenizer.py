@@ -27,7 +27,8 @@ class SnippetTokenizer(object):
         import itertools as it
 
         all_sents = []
-        for i in range(k[0],k[1]+1):
+        n = min(len(sentences[:30]), k[1]+1)
+        for i in range(k[0],n):
             pairs = it.combinations(sentences[:30], i)
             all_sents.extend([self.separator.join(p) for p in pairs])
         return all_sents
@@ -71,4 +72,4 @@ class Random1SnippetTokenizer(SnippetTokenizer):
             all_sents.append(self.separator.join(p))
 
         pick = self.rnd.randint(0,len(all_sents),1)
-        return all_sents[pick]
+        return [all_sents[pick]]
