@@ -208,6 +208,9 @@ class Experiment(object):
 
         return current_cost + self.costfn(query, cost_model=self.cost_model)
 
+    def query_size(self, query):
+        pass
+
     def evaluate(self, learner, test):
         prediction = learner.predict(test.bow)
         pred_proba = learner.predict_proba(test.bow)
@@ -302,7 +305,7 @@ class Experiment(object):
 
                 if self.debug:
                     self._debug(learner, expert, query)
-
+                query_size = self.query_size(query)
             # evaluate student
             step_results = self.evaluate(learner, test)
 
