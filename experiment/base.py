@@ -35,6 +35,7 @@ class Experiment(object):
         self.split = None
         self.costfn = None
         self.cost_model = None
+        self.cost_base = 25
         self.budget = None
         self.max_iteration = None
         self.step = None
@@ -122,6 +123,7 @@ class Experiment(object):
         self.costfn = exputil.get_costfn(config['costfunction'])
         if 'cost_model' in config.keys():
             self.cost_model = config['cost_model']
+            self.cost_base = config['cost_base']
 
         # data related config
         config = cfgutil.get_section_options(config_obj, 'data')
@@ -386,14 +388,14 @@ class Experiment(object):
         cost = []
         for tr in results:
             c, p, s, n = self._get_iteration(tr['accuracy'])
-            c, p = self._extrapolate(p,c,self.cost_model[25],self.trials)
+            c, p = self._extrapolate(p,c,self.cost_model[self.cost_base],self.trials)
             accu.append(p)
             cost.append(c)
             c, p, s, n = self._get_iteration(tr['auc'])
-            c, p = self._extrapolate(p,c,self.cost_model[25],self.trials)
+            c, p = self._extrapolate(p,c,self.cost_model[self.cost_base],self.trials)
             auc.append(p)
             c, p, s, n = self._get_cm_iteration(tr['ora_accu'])
-            c, p = self._extrapolate(p,c,self.cost_model[25],self.trials)
+            c, p = self._extrapolate(p,c,self.cost_model[self.cost_base],self.trials)
             ora.append(p)
         min_x = min([len(m) for m in cost])
 
