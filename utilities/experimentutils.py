@@ -185,6 +185,13 @@ def get_tokenizer(tk_name, **kwargs):
             k = kwargs['snip_size']
         sent_detector = First1SnippetTokenizer(k=k)
         return sent_detector
+    elif tk_name == 'random1snippet':
+        from snippet_tokenizer import Random1SnippetTokenizer
+        k = (1,1)
+        if 'snip_size' in kwargs:
+            k = kwargs['snip_size']
+        sent_detector = Random1SnippetTokenizer(k=k)
+        return sent_detector
     else:
         raise Exception("Unknown sentence tokenizer")
 

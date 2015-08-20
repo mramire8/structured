@@ -1,7 +1,6 @@
 __author__ = 'maru'
 
-__author__ = 'maru'
-
+import numpy as np
 
 class SnippetTokenizer(object):
 
@@ -54,3 +53,22 @@ class First1SnippetTokenizer(SnippetTokenizer):
             all_sents.append(self.separator.join(p))
             break
         return all_sents
+
+
+class Random1SnippetTokenizer(SnippetTokenizer):
+
+    def __init__(self, k=(1,1), seed=5432):
+        super(Random1SnippetTokenizer,self).__init__(k)
+        self.rnd = np.random.RandomState(seed)
+
+    def get_sentences_k(self, sentences, k):
+        import itertools as it
+        n = len(sentences[:30])
+        all_sents = []
+
+        pairs = it.combinations(sentences[:30], min(k[1], n))
+        for p in pairs:
+            all_sents.append(self.separator.join(p))
+
+        pick = self.rnd.randint(0,len(all_sents),1)
+        return all_sents[pick]
