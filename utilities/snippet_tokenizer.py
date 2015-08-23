@@ -27,17 +27,23 @@ class SnippetTokenizer(object):
         import itertools as it
 
         all_sents = []
-        n = min(len(sentences[:30]), k[1]+1)
+        n = min(len(sentences[:30])+1, k[1]+1)
+
         for i in range(k[0],n):
             pairs = it.combinations(sentences[:30], i)
             all_sents.extend([self.separator.join(p) for p in pairs])
+        print all_sents
         return all_sents
 
     def get_sentences(self, doc, k):
 
         d_sent = self.sent_tk.tokenize_sents([doc])
+        text_min = []
+        for sentences in d_sent[0]:
+            if len(sentences.strip()) > 2:
+                text_min.append(sentences)  # at least 2 characters
 
-        return self.get_sentences_k(d_sent[0], k)
+        return self.get_sentences_k(text_min, k)
 
 
 class First1SnippetTokenizer(SnippetTokenizer):
