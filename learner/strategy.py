@@ -373,13 +373,14 @@ class StructuredLearner(ActiveLearner):
 
         x_scores = self._do_calibration(x_scores, y_pred)
 
-        #Note: this works only if the max score is always > 0
-        sent_index = x_scores.argmax(axis=1)  ## within each document thesentence with the max score
+        # Note: this works only if the max score is always > 0
+        sent_index = x_scores.argmax(axis=1)   # within each document the sentence with the max score
         # sent_index = np.array(sent_index.reshape(sent_index.shape[0]))[0] ## reshape, when sparse matrix
-        sent_max = x_scores.max(axis=1)  ## within each document thesentence with the max score
+        sent_max = x_scores.max(axis=1)   # within each document the sentence with the max score
         sent_text = [x_sent[i][maxx] for i, maxx in enumerate(sent_index)]
         sent_text = np.array(sent_text, dtype=object)
-        sent_bow = np.array(x_sent_bow, dtype=object)
+        sent_bow = np.array([x_sent_bow[i][maxx] for i,maxx in enumerate(sent_index)], dtype=object)
+        # sent_bow = np.array(x_sent_bow, dtype=object)
         return sent_max, sent_text, sent_index, sent_bow
 
     def __str__(self):

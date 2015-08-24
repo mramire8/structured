@@ -2,6 +2,7 @@ __author__ = 'maru'
 
 import numpy as np
 
+
 class SnippetTokenizer(object):
 
     def __init__(self, k=(1,1)):
@@ -28,11 +29,13 @@ class SnippetTokenizer(object):
 
         all_sents = []
         n = min(len(sentences[:30])+1, k[1]+1)
+        if min(n, k[0]) > len(sentences[:30]):
+            return sentences
 
         for i in range(k[0],n):
             pairs = it.combinations(sentences[:30], i)
             all_sents.extend([self.separator.join(p) for p in pairs])
-        print all_sents
+
         return all_sents
 
     def get_sentences(self, doc, k):
@@ -49,7 +52,7 @@ class SnippetTokenizer(object):
 class First1SnippetTokenizer(SnippetTokenizer):
 
     def __init__(self, k=(1,1)):
-        super(First1SnippetTokenizer,self).__init__(k)
+        super(First1SnippetTokenizer, self).__init__(k=k)
 
     def get_sentences_k(self, sentences, k):
         import itertools as it
