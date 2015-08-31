@@ -163,7 +163,7 @@ class Experiment(object):
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
                                           vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t * 10 + 10))
 
-            expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'))
+            expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'), size=len(train.data))
 
             expert.fit(train.data, y=train.target, vct=self.vct)
 
@@ -294,7 +294,7 @@ class Experiment(object):
             else:
                 # select query and query labels
                 query = learner.next(pool, self.step)
-                labels = expert.label(query.bow, y=query.target)
+                labels = expert.label(query, y=query.target)
 
                 # update pool and cost
                 pool, train = self.update_pool(pool, query, labels, train)

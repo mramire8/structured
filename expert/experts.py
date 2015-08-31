@@ -143,7 +143,10 @@ class PerfectReluctantDocumentExpert(PredictingExpert):
         self.oracle.fit(sx, y)
         return self
 
-    def label(self, data, y=None):
+    def label(self, query, y=None):
+        data = query
+        if isinstance(query, dict):
+            data = query.bow
         prediction = np.array([None] * data.shape[0], dtype=object)
         proba = self.oracle.predict_proba(data)
         unc = 1. - proba.max(axis=1)

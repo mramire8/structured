@@ -110,11 +110,13 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
     return learner
 
 
-def get_expert(config):
+def get_expert(config, size=None):
 
     from expert.experts import PredictingExpert, SentenceExpert, \
         TrueExpert, NoisyExpert, ReluctantSentenceExpert, ReluctantDocumentExpert, \
         PerfectReluctantDocumentExpert, TrueReluctantExpert
+    from expert.noisy_expert import NoisyReluctantDocumentExpert
+
     cl_name = config['model']
     clf = get_classifier(cl_name, parameter=config['parameter'])
 
@@ -138,6 +140,13 @@ def get_expert(config):
     elif config['type'] == 'perfectreluctant': # reluctant based on unc threshold
         p = config['threshold']
         expert = PerfectReluctantDocumentExpert(clf, p)
+
+    elif config['type'] == 'noisyreluctantscale': # reluctant based on unc threshold, noisy based on CE
+        p = config['threshold']
+        args = {'factor': config['scale'], 'data_size': size}
+
+        expert = NoisyReluctantDocumentExpert(clf, p, **args)
+
     elif config['type'] == 'truereluctant':  # reluctant based on p probability
         p = config['neutral_p']
         expert = TrueReluctantExpert(None, p)
