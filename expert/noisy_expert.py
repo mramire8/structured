@@ -29,7 +29,7 @@ class NoisyReluctantDocumentExpert(PredictingExpert):
         :return: int \in [0,4]
         '''
         col = range(1,6)
-        return np.digitize(k,col)
+        return min(col.index(k), len(col)-1)
         # return col.index(k)
 
     def _flip_coin(self, x, y):
@@ -42,6 +42,7 @@ class NoisyReluctantDocumentExpert(PredictingExpert):
         if x == None:
             coin = self.rnd.random_sample()
         else:
+            y = min(y, self.coin.shape[1]-1)
             coin = self.coin[x, y]
         return coin
 
