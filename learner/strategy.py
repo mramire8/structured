@@ -349,16 +349,20 @@ class StructuredLearner(ActiveLearner):
             text_min.append([s for s in sentences if len(s.strip()) > 2])  # at least 2 characters
         return text_min
 
-    def _compute_snippet(self, x_text):
-        """select the sentence with the best score for each document"""
-        # scores = super(Joint, self)._compute_snippet(x_text)
-        import sys
+    def _get_snippets(self, x_text):
         x_sent_bow = []
         x_len = 0
         x_sent = self._get_sentences(x_text)
         for sentences in x_sent:
             x_sent_bow.append(self.vct.transform(sentences))
             x_len = max(len(sentences), x_len)
+        return x_sent_bow, x_sent, x_len
+
+    def _compute_snippet(self, x_text):
+        """select the snippet with the best score for each document"""
+        # scores = super(Joint, self)._compute_snippet(x_text)
+        import sys
+        x_sent_bow, x_sent, x_len = self._get_snippets(x_text)
 
         x_scores = self._create_matrix(x_sent, x_len)
         y_pred = self._create_matrix(x_sent, x_len)
@@ -382,6 +386,7 @@ class StructuredLearner(ActiveLearner):
         sent_bow = np.array([x_sent_bow[i][maxx] for i,maxx in enumerate(sent_index)], dtype=object)
         # sent_bow = np.array(x_sent_bow, dtype=object)
         return sent_max, sent_text, sent_index, sent_bow
+
 
     def __str__(self):
         return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model,

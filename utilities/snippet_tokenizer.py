@@ -1,6 +1,7 @@
 __author__ = 'maru'
 
 import numpy as np
+import itertools as it
 
 
 class SnippetTokenizer(object):
@@ -24,8 +25,36 @@ class SnippetTokenizer(object):
     def __str__(self):
         return self.__class__.__name__
 
+    def get_combinations(self, n, k):
+        return it.combinations(range(n), k)
+
+    def get_combination_pairs(self, sentences):
+        all_sents = []
+        k = self.k
+        n = min(len(sentences[:30])+1, k[1]+1)
+
+        if min(n, k[0]) > len(sentences[:30]):
+            return sentences
+        sentences = np.array(sentences)
+        for i in range(k[0],n):
+            pairs = self.get_combinations(len(sentences[:30]), i)
+            all_sents.extend([p for p in pairs])
+        return all_sents
+
     def get_sentences_k(self, sentences, k):
-        import itertools as it
+        all_sents = []
+        n = min(len(sentences[:30])+1, k[1]+1)
+
+        if min(n, k[0]) > len(sentences[:30]):
+            return sentences
+        sentences = np.array(sentences)
+        for i in range(k[0],n):
+            pairs = self.get_combinations(len(sentences[:30]), i)
+            all_sents.extend([self.separator.join(sentences[list(p)]) for p in pairs])
+
+        return all_sents
+
+    def get_sentences_k_v0(self, sentences, k):
 
         all_sents = []
         n = min(len(sentences[:30])+1, k[1]+1)
@@ -55,14 +84,15 @@ class First1SnippetTokenizer(SnippetTokenizer):
         super(First1SnippetTokenizer, self).__init__(k=k)
 
     def get_sentences_k(self, sentences, k):
-        import itertools as it
-        n = len(sentences[:30])
+
         all_sents = []
-        pairs = it.combinations(sentences[:30], min(k[1], n))
-        for p in pairs:
-            all_sents.append(self.separator.join(p))
-            break
+        sentences= np.array(sentences)
+        pairs = self.get_combination_pairs(sentences[:30])
+        all_sents.extend([self.separator.join(sentences[p]) for p in pairs])
         return all_sents
+
+    def get_combination_pairs(self, sents):
+        return [range(0, min(self.k[1], len(sents)))]
 
 
 class Random1SnippetTokenizer(SnippetTokenizer):
@@ -72,7 +102,7 @@ class Random1SnippetTokenizer(SnippetTokenizer):
         self.rnd = np.random.RandomState(seed)
 
     def get_sentences_k(self, sentences, k):
-        import itertools as it
+
         n = len(sentences[:30])
         all_sents = []
 
@@ -82,3 +112,59 @@ class Random1SnippetTokenizer(SnippetTokenizer):
 
         pick = self.rnd.randint(0,len(all_sents),1)
         return [all_sents[pick]]
+
+    def get_combination_pairs(self, sents):
+        all_sents = []
+        k = self.k
+        n = min(len(sents[:30])+1, k[1]+1)
+
+        if min(n, k[0]) > len(sents[:30]):
+            return range(0, len(sents[:30]))
+        sentences = np.array(sents)
+        for i in range(k[0],n):
+            pairs = self.get_combinations(len(sentences[:30]), i)
+            all_sents.extend([p for p in pairs])
+
+        pick = self.rnd.randint(0,len(all_sents),1)
+        return [all_sents[pick]]
+
+
+class WindowSnippetTokenizer(SnippetTokenizer):
+
+    def __init__(self, k=(1,1)):
+        super(WindowSnippetTokenizer, self).__init__(k=k)
+
+    def get_sentences_k(self, sentences, k):
+
+        n = len(sentences[:30])
+        all_sents = []
+        sentences = np.array(sentences)
+        pairs = self.get_combination_pairs(sentences)
+        for p in pairs:
+            all_sents.append(self.separator.join(sentences[p]))
+
+        return all_sents
+
+    def get_combinations(self, n, k):
+        ch = range(n)
+        ws = min(n, k)
+        all_pairs =[]
+        for c in range(n-ws+1):
+            all_pairs.append(ch[c:c+ws])
+        return all_pairs
+
+    def get_combination_pairs(self, sents):
+        all_sents = []
+        k = self.k
+        n = min(len(sents[:30])+1, k[1]+1)
+
+        if min(n, k[0]) > len(sents[:30]):
+            return range(0, len(sents[:30]))
+
+        sentences = np.array(sents)
+        for i in range(k[0],n):
+            pairs = self.get_combinations(len(sentences[:30]), i)
+            all_sents.extend([p for p in pairs])
+
+        return all_sents
+
