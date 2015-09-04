@@ -334,6 +334,12 @@ class StructuredLearner(ActiveLearner):
         scores[0] = 1
         return scores
 
+    def _snippet_cost(self, X):
+        return np.array(self._cost_fn(xi) for xi in X)
+
+    def _cost_uniform(self, x):
+        return 1
+
     def _create_matrix(self, x_sent, x_len):
         from scipy.sparse import lil_matrix
 
