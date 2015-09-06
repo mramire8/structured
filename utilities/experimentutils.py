@@ -84,7 +84,7 @@ def get_classifier(cl_name, **kwargs):
     return clf
 
 
-def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
+def get_learner(learn_config, vct=None, sent_tk=None, seed=None, cost_fn=None, cost_model=None):
     from learner.base import Learner
     cl_name = learn_config['model']
     clf = get_classifier(cl_name, parameter=learn_config['parameter'])
@@ -106,6 +106,8 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None):
     learner.set_sent_tokenizer(sent_tk)
     learner.set_calibration_method(learn_config['calibration'])
     learner.set_vct(vct)
+    learner.set_cost_model(cost_model)
+    learner.set_cost_fn(cost_fn)
 
     return learner
 

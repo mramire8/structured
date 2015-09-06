@@ -161,7 +161,7 @@ class Experiment(object):
             self.print_lap("\nSampled", t0)
             # get the expert and student
             learner = exputil.get_learner(cfgutil.get_section_options(self.config, 'learner'),
-                                          vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t * 10 + 10))
+                                          vct=self.vct, sent_tk=self.sent_tokenizer, seed=(t * 10 + 10), cost_fn=self.costfn, cost_model=self.cost_model)
 
             expert = exputil.get_expert(cfgutil.get_section_options(self.config, 'expert'), size=len(train.data))
 
@@ -206,7 +206,7 @@ class Experiment(object):
 
     def update_cost(self, current_cost, query):
 
-        return current_cost + self.costfn(query, cost_model=self.cost_model)
+        return current_cost + sum(self.costfn(query, cost_model=self.cost_model))
 
     def query_size(self, query):
         pass

@@ -2,6 +2,11 @@ __author__ = 'mramire8'
 
 
 def unit_cost(query, cost_model=None):
+    q = query
+    if isinstance(q, dict):
+        q = query.bow
+    else:
+        return len(q)
     return query.bow[0]
 
 
@@ -12,11 +17,14 @@ def intra_cost(query, cost_model=None):
     kvals = sorted(cost_model.keys())
     cost = [cost_model[k] for k in kvals]
 
-    x_text = query.snippet
+    if isinstance(query, dict):
+        x_text = query.snippet
+    else:
+        x_text = query
     if x_text is not None:
         c = [_cost_intrapolated(len(x.split()), cost, kvals) for x in x_text]
 
-    return sum(c)
+    return c
 
 
 def _cost_intrapolated(x, cost, kvalues):

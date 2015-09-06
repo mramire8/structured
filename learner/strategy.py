@@ -139,6 +139,13 @@ class StructuredLearner(ActiveLearner):
         self.vct = None
         self.calibrate = None
         self.sent_rnd = np.random.RandomState(self.seed)
+        self.cost_model = None
+        self.cost_fn = None
+
+    def set_cost_model(self, model):
+        self.cost_model = model
+    def set_cost_fn(self, fn):
+        self.cost_fn = fn
 
     @staticmethod
     def convert_to_sentence(X_text, y, sent_tk, limit=None):
@@ -334,11 +341,9 @@ class StructuredLearner(ActiveLearner):
         scores[0] = 1
         return scores
 
-    def _snippet_cost(self, X):
-        return np.array(self._cost_fn(xi) for xi in X)
-
-    def _cost_uniform(self, x):
-        return 1
+    def _snippet_cost(self, snips):
+        # return np.array([self.cost_fn(xi, cost_model=self.cost_model) for xi in snips])
+        return np.array(self.cost_fn(snips, cost_model=self.cost_model))
 
     def _create_matrix(self, x_sent, x_len):
         from scipy.sparse import lil_matrix
@@ -364,6 +369,9 @@ class StructuredLearner(ActiveLearner):
             x_len = max(len(sentences), x_len)
         return x_sent_bow, x_sent, x_len
 
+    def snippet_roi(self, s, s_text):
+        return self.snippet_utility(s) / self._snippet_cost(s_text)
+
     def _compute_snippet(self, x_text):
         """select the snippet with the best score for each document"""
         # scores = super(Joint, self)._compute_snippet(x_text)
@@ -376,7 +384,8 @@ class StructuredLearner(ActiveLearner):
         for i, s in enumerate(x_sent_bow):
             score_i = np.ones(x_len) * -1 * sys.maxint
             y_pred_i = np.zeros(x_len)
-            score_i[:s.shape[0]] = self.snippet_utility(s)
+            # score_i[:s.shape[0]] = self.snippet_utility(s)
+            score_i[:s.shape[0]] = self.snippet_roi(s, x_sent[i])
             y_pred_i[:s.shape[0]] = self.snippet_model.predict(s) + 1  # add 1 to avoid prediction 0, keep the sparsity
             x_scores[i] = score_i
             y_pred[i] = y_pred_i
@@ -392,7 +401,6 @@ class StructuredLearner(ActiveLearner):
         sent_bow = np.array([x_sent_bow[i][maxx] for i,maxx in enumerate(sent_index)], dtype=object)
         # sent_bow = np.array(x_sent_bow, dtype=object)
         return sent_max, sent_text, sent_index, sent_bow
-
 
     def __str__(self):
         return "{}(model={}, snippet_model={}, utility={}, snippet={})".format(self.__class__.__name__, self.model,
