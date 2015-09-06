@@ -84,7 +84,7 @@ def get_classifier(cl_name, **kwargs):
     return clf
 
 
-def get_learner(learn_config, vct=None, sent_tk=None, seed=None, cost_fn=None, cost_model=None):
+def get_learner(learn_config, vct=None, sent_tk=None, seed=None, cost_model=None):
     from learner.base import Learner
     cl_name = learn_config['model']
     clf = get_classifier(cl_name, parameter=learn_config['parameter'])
@@ -107,7 +107,7 @@ def get_learner(learn_config, vct=None, sent_tk=None, seed=None, cost_fn=None, c
     learner.set_calibration_method(learn_config['calibration'])
     learner.set_vct(vct)
     learner.set_cost_model(cost_model)
-    learner.set_cost_fn(cost_fn)
+    learner.set_cost_fn(get_costfn(learn_config['cost_function']))
 
     return learner
 
@@ -215,17 +215,17 @@ def get_tokenizer(tk_name, **kwargs):
 
 
 def get_costfn(fn_name):
+    from costutils import intra_cost, unit_cost
     if fn_name == 'unit':
         return unit_cost
     elif fn_name == 'variable_cost':
-        from costutils import intra_cost
         return intra_cost
     else:
         raise Exception("Unknown cost function")
 
 
-def unit_cost(X):
-    return X.shape[0]
+# def unit_cost(X):
+#     return X.shape[0]
 
 
 def print_file(cost, mean, std, f):

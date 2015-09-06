@@ -2,12 +2,12 @@ __author__ = 'mramire8'
 
 
 def unit_cost(query, cost_model=None):
-    q = query
-    if isinstance(q, dict):
-        q = query.bow
+    n = 1
+    if isinstance(query, dict):
+        n = len(query.snippet)
     else:
-        return len(q)
-    return query.bow[0]
+        n = len(query)
+    return [1.] * n
 
 
 def intra_cost(query, cost_model=None):
