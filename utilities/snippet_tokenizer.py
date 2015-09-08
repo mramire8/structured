@@ -168,3 +168,42 @@ class WindowSnippetTokenizer(SnippetTokenizer):
 
         return all_sents
 
+class FirstWindowSnippetTokenizer(SnippetTokenizer):
+
+    def __init__(self, k=(1,1)):
+        super(FirstWindowSnippetTokenizer, self).__init__(k=k)
+
+    def get_sentences_k(self, sentences, k):
+
+        n = len(sentences[:30])
+        all_sents = []
+        sentences = np.array(sentences)
+        pairs = self.get_combination_pairs(sentences)
+        for p in pairs:
+            all_sents.append(self.separator.join(sentences[p]))
+
+        return all_sents
+
+    def get_combinations(self, n, k):
+        ws = min(n, k)
+        all_pairs =[]
+
+        for c in range(ws):
+            all_pairs.append(range(c+1))
+
+        return all_pairs
+
+    def get_combination_pairs(self, sents):
+        all_sents = []
+        k = self.k
+        n = min(len(sents[:30])+1, k[1]+1)
+
+        if min(n, k[0]) > len(sents[:30]):
+            return self.get_combinations(len(sents[:30]),k[0])
+
+        sentences = np.array(sents)
+        for i in range(k[0],n):
+            pairs = self.get_combinations(len(sentences[:30]), i)
+            all_sents.extend([p for p in pairs])
+
+        return all_sents
