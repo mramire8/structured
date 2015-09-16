@@ -168,6 +168,7 @@ class WindowSnippetTokenizer(SnippetTokenizer):
 
         return all_sents
 
+
 class FirstWindowSnippetTokenizer(SnippetTokenizer):
 
     def __init__(self, k=(1,1)):
